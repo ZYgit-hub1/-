@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>检测v4</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}pre{padding:10px;font-size:12px;line-height:1.5}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837" style="display:none"></canvas>
+<pre id="out">分析中...</pre>
+<script>
+const img = new Image();
+img.crossOrigin = 'anonymous';
+img.onload = () => {
+  try {
+    const cv = document.getElementById('c');
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, 1024, 837);
+    const W=1024,H=837;
+    const data = ctx.getImageData(0,0,W,H).data;
+    const at=(x,y)=>{const i=(y*W+x)*4;return [data[i],data[i+1],data[i+2],data[i+3]];};
+    const isOcean=(x,y)=>{const[r,g,b,a]=at(x,y);return a>128&&b>200&&b>r+15&&b>g+3&&r>165;};
+    const isWhite=(x,y)=>{const[r,g,b,a]=at(x,y);return a>128&&r>245&&g>245&&b>245;};
+    
+    // 海洋边界
+    let oMinY=H,oMaxY=0,oMinX=W,oMaxX=0;
+    for(let y=40;y<H-15;y++)for(let x=0;x<W;x++){
+      if(isOcean(x,y)){
+        if(y<oMinY)oMinY=y;if(y>oMaxY)oMaxY=y;
+        if(x<oMinX)oMinX=x;if(x>oMaxX)oMaxX=x;
+      }
+    }
+    
+    // 每行白色像素数(排除标题y<50, 图例y>760)
+    const rowStats=[];
+    for(let y=50;y<760;y++){
+      let wc=0;for(let x=0;x<W;x++)if(isWhite(x,y))wc++;
+      rowStats.push({y,wc});
+    }
+    rowStats.sort((a,b)=>b.wc-a.wc);
+    const topYs=rowStats.slice(0,15).map(r=>r.y).sort((a,b)=>a-b);
+    const medianY=topYs[Math.floor(topYs.length/2)];
+    
+    // medianY行主白色段
+    let segs=[],inSeg=false,s=0;
+    for(let x=0;x<W;x++){
+      const w=isWhite(x,medianY);
+      if(w&&!inSeg){inSeg=true;s=x;}
+      if(!w&&inSeg){segs.push([s,x-1]);inSeg=false;}
+    }
+    if(inSeg)segs.push([s,W-1]);
+    segs.sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]));
+    const mainSeg=segs[0]||[0,0];
+    
+    // 该段内每列白色像素数, 找最高列
+    const colStats=[];
+    for(let x=mainSeg[0];x<=mainSeg[1];x++){
+      let wc=0;for(let y=50;y<760;y++)if(isWhite(x,y))wc++;
+      colStats.push({x,wc});
+    }
+    colStats.sort((a,b)=>b.wc-a.wc);
+    const topXs=colStats.slice(0,15).map(r=>r.x).sort((a,b)=>a-b);
+    const medianX=topXs[Math.floor(topXs.length/2)];
+    
+    // medianX列主白色段
+    let vSegs=[];inSeg=false;
+    for(let y=50;y<760;y++){
+      const w=isWhite(medianX,y);
+      if(w&&!inSeg){inSeg=true;s=y;}
+      if(!w&&inSeg){vSegs.push([s,y-1]);inSeg=false;}
+    }
+    if(inSeg)vSegs.push([s,759]);
+    vSegs.sort((a,b)=>(b[1]-b[0])-(a[1]-a[0]));
+    const mainVSeg=vSegs[0]||[50,760];
+    
+    // 再用mainVSeg范围做行的左右边界
+    // 找y在mainVSeg范围内, 每行主白色段
+    let allL=W,allR=0,allT=H,allB=0;
+    for(let y=mainVSeg[0];y<=mainVSeg[1];y++){
+      let firstL=-1,lastR=-1;
+      for(let x=0;x<W;x++){
+        if(isWhite(x,y)){if(firstL<0)firstL=x;lastR=x;}
+      }
+      if(firstL>=0){
+        if(firstL<allL)allL=firstL;
+        if(lastR>allR)allR=lastR;
+        if(y<allT)allT=y;
+        if(y>allB)allB=y;
+      }
+    }
+    
+    document.getElementById('out').textContent =
+`海洋: x[${oMinX},${oMaxX}] y[${oMinY},${oMaxY}]
+  海洋X%: [${(oMinX/W*100).toFixed(1)}%, ${(oMaxX/W*100).toFixed(1)}%]
+  海洋Y%: [${(oMinY/H*100).toFixed(1)}%, ${(oMaxY/H*100).toFixed(1)}%]
+
+陆地最宽行(中位): y=${medianY} (${(medianY/H*100).toFixed(1)}%)
+该行主白色段: x=[${mainSeg[0]}, ${mainSeg[1]}] 宽=${mainSeg[1]-mainSeg[0]}
+  X%: [${(mainSeg[0]/W*100).toFixed(1)}%, ${(mainSeg[1]/W*100).toFixed(1)}%]
+
+陆地最高列(中位): x=${medianX} (${(medianX/W*100).toFixed(1)}%)
+该列主白色段: y=[${mainVSeg[0]}, ${mainVSeg[1]}] 高=${mainVSeg[1]-mainVSeg[0]}
+  Y%: [${(mainVSeg[0]/H*100).toFixed(1)}%, ${(mainVSeg[1]/H*100).toFixed(1)}%]
+
+广东陆地外接框(基于最宽行+最高列交叉):
+  x=[${allL}, ${allR}] (${(allL/W*100).toFixed(1)}%, ${(allR/W*100).toFixed(1)}%)
+  y=[${allT}, ${allB}] (${(allT/H*100).toFixed(1)}%, ${(allB/H*100).toFixed(1)}%)
+  宽=${allR-allL} 高=${allB-allT} 宽高比=${((allR-allL)/(allB-allT)).toFixed(3)}`;
+  } catch(e) {
+    document.getElementById('out').textContent = 'ERR: '+e.message+'\n'+e.stack;
+  }
+};
+img.onerror = (e) => { document.getElementById('out').textContent='IMG LOAD FAIL'; };
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

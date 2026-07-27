@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>边界检测</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}canvas{display:block;max-width:1024px;height:auto}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837"></canvas>
+<div id="out"></div>
+<script>
+const img = new Image();
+img.onload = () => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const W = 1024, H = 837;
+  const data = ctx.getImageData(0,0,W,H).data;
+  // 广东省陆地是白色/近白色, 海洋是浅蓝色, 邻省是浅灰
+  // 检测: 像素是白色(R>235,G>235,B>235) 且 非透明 -> 陆地
+  const isLand = (x,y) => {
+    const i = (y*W+x)*4;
+    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+    if(a<128) return false;
+    // 白色: 都接近255, 且差异小
+    return r>235 && g>235 && b>235;
+  };
+  const isOcean = (x,y) => {
+    const i=(y*W+x)*4;
+    const r=data[i],g=data[i+1],b=data[i+2];
+    // 浅蓝色: B明显高于R,G, 且偏亮
+    return b>200 && b>r+15 && b>g+5 && r>180;
+  };
+  // 扫描每行每列, 找陆地范围
+  let minX=W, maxX=0, minY=H, maxY=0;
+  let landCount=0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      if(isLand(x,y)){
+        if(x<minX)minX=x;
+        if(x>maxX)maxX=x;
+        if(y<minY)minY=y;
+        if(y>maxY)maxY=y;
+        landCount++;
+      }
+    }
+  }
+  // 也统计海洋范围
+  let oMinX=W,oMaxX=0,oMinY=H,oMaxY=0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      if(isOcean(x,y)){
+        if(x<oMinX)oMinX=x;
+        if(x>oMaxX)oMaxX=x;
+        if(y<oMinY)oMinY=y;
+        if(y>oMaxY)oMaxY=y;
+      }
+    }
+  }
+  const out = document.getElementById('out');
+  out.innerHTML = `
+    <h3>陆地(白色)范围</h3>
+    <p>minX=${minX}, maxX=${maxX}, minY=${minY}, maxY=${maxY}</p>
+    <p>陆地像素: ${landCount} (${(landCount/(W*H)*100).toFixed(1)}%)</p>
+    <p>陆地宽: ${maxX-minX}, 高: ${maxY-minY}</p>
+    <p>陆地中心: (${((minX+maxX)/2).toFixed(0)}, ${((minY+maxY)/2).toFixed(0)})</p>
+    <p>陆地宽高比: ${((maxX-minX)/(maxY-minY)).toFixed(3)}</p>
+    <h3>海洋(浅蓝)范围</h3>
+    <p>minX=${oMinX}, maxX=${oMaxX}, minY=${oMinY}, maxY=${oMaxY}</p>
+    <p>海洋宽: ${oMaxX-oMinX}, 高: ${oMaxY-oMinY}</p>
+    <h3>百分比边界</h3>
+    <p>minX%=${(minX/W*100).toFixed(2)}, maxX%=${(maxX/W*100).toFixed(2)}</p>
+    <p>minY%=${(minY/H*100).toFixed(2)}, maxY%=${(maxY/H*100).toFixed(2)}</p>
+  `;
+  // 画边界框
+  ctx.strokeStyle='#ef4444'; ctx.lineWidth=2;
+  ctx.strokeRect(minX,minY,maxX-minX,maxY-minY);
+  ctx.strokeStyle='#3b82f6';
+  ctx.strokeRect(oMinX,oMinY,oMaxX-oMinX,oMaxY-oMinY);
+};
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

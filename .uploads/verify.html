@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>校准验证</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace;padding:8px}
+.wrap{position:relative;width:1000px;height:500px;background:#0f172a;margin:0 auto;display:flex;align-items:center;justify-content:center}
+.stage{position:relative}
+.stage img{display:block;width:100%;height:100%}
+.pin{position:absolute;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;
+  border:3px solid #fff;box-shadow:0 0 0 2px #000;background:#ef4444;pointer-events:none;z-index:5}
+.pin::after{content:attr(data-l);position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;background:#000;color:#fde047;font-size:10px;padding:1px 4px;border-radius:3px;font-weight:700}
+.hydro{position:absolute;transform:translate(-50%,-100%);pointer-events:none;z-index:6}
+.hydro svg{filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.hydro-label{font-size:9px;font-weight:700;background:rgba(15,23,42,.9);color:#fff;padding:0 4px;border-radius:2px;border:1px solid;white-space:nowrap}
+pre{font-size:11px;color:#94a3b8;padding:8px}</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="stage" id="stage">
+    <img src="/src/assets/guangdong-map.png" id="mapImg"/>
+    <div id="pins"></div>
+  </div>
+</div>
+<pre id="out"></pre>
+<script>
+// 复制组件中的投影逻辑
+const MAP_BOUNDS = { minLng:109.55, maxLng:117.40, minLat:20.00, maxLat:25.55 };
+const MAP_IMAGE_RATIO = 1024/837;
+function projectToMapPct(lng,lat){
+  const {minLng,maxLng,minLat,maxLat}=MAP_BOUNDS;
+  const xPct=4+((lng-minLng)/(maxLng-minLng))*92;
+  const yPct=6+((maxLat-lat)/(maxLat-minLat))*86;
+  return {xPct:Math.max(1,Math.min(99,xPct)),yPct:Math.max(1,Math.min(99,yPct))};
+}
+
+const REFS=[
+  {name:'广州',lng:113.27,lat:23.13,star:true},
+  {name:'深圳',lng:114.06,lat:22.55},
+  {name:'珠海',lng:113.58,lat:22.28},
+  {name:'汕头',lng:116.68,lat:23.35},
+  {name:'湛江',lng:110.36,lat:21.27},
+  {name:'韶关',lng:113.60,lat:24.81},
+  {name:'梅州',lng:116.12,lat:24.29},
+  {name:'河源',lng:114.70,lat:23.74},
+  {name:'清远',lng:113.06,lat:23.68},
+  {name:'茂名',lng:110.93,lat:21.66},
+  {name:'阳江',lng:111.98,lat:21.86},
+  {name:'潮州',lng:116.65,lat:23.66},
+  {name:'肇庆',lng:112.47,lat:23.05},
+  {name:'汕尾',lng:115.37,lat:22.79},
+];
+
+const HYDRO=[
+  {name:'高要',lng:112.27,lat:23.05,lvl:9.5},
+  {name:'石角',lng:112.96,lat:23.55,lvl:11.0},
+  {name:'博罗',lng:114.29,lat:23.17,lvl:11.2},
+  {name:'潮安',lng:116.68,lat:23.46,lvl:13.5},
+  {name:'化州',lng:110.60,lat:21.66,lvl:13.5},
+  {name:'马口',lng:112.81,lat:23.17,lvl:7.5},
+  {name:'河源',lng:114.70,lat:23.74,lvl:39.0},
+  {name:'缸瓦窑',lng:110.36,lat:21.27,lvl:7.0},
+  {name:'广州',lng:113.27,lat:23.13,lvl:6.5},
+  {name:'中山',lng:113.39,lat:22.52,lvl:4.5},
+  {name:'汕尾',lng:115.37,lat:22.79,lvl:6.0},
+  {name:'汕头',lng:116.68,lat:23.35,lvl:12.0},
+  {name:'阳江',lng:111.98,lat:21.86,lvl:6.5},
+  {name:'茂名',lng:110.93,lat:21.66,lvl:11.0},
+];
+
+function updateSize(){
+  const wrap=document.getElementById('wrap');
+  const stage=document.getElementById('stage');
+  const cw=wrap.clientWidth, ch=wrap.clientHeight;
+  let w,h;
+  if(cw/ch>MAP_IMAGE_RATIO){h=ch;w=h*MAP_IMAGE_RATIO;}
+  else{w=cw;h=w/MAP_IMAGE_RATIO;}
+  stage.style.width=w+'px';
+  stage.style.height=h+'px';
+}
+
+function render(){
+  updateSize();
+  const pinsEl=document.getElementById('pins');
+  pinsEl.innerHTML='';
+  const lines=[];
+  REFS.forEach(r=>{
+    const {xPct,yPct}=projectToMapPct(r.lng,r.lat);
+    const pin=document.createElement('div');
+    pin.className='pin';
+    pin.style.left=xPct+'%';pin.style.top=yPct+'%';
+    pin.style.background=r.star?'#facc15':'#ef4444';
+    pin.setAttribute('data-l',r.name);
+    pinsEl.appendChild(pin);
+    lines.push(`${r.name}: x=${xPct.toFixed(1)}% y=${yPct.toFixed(1)}%`);
+  });
+  HYDRO.forEach(h=>{
+    const {xPct,yPct}=projectToMapPct(h.lng,h.lat);
+    const el=document.createElement('div');
+    el.className='hydro';
+    el.style.left=xPct+'%';el.style.top=yPct+'%';
+    const color=h.lvl>12?'#ef4444':h.lvl>9?'#f59e0b':'#3b82f6';
+    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 2 C7 9 5 13 5 16 a7 7 0 0 0 14 0 c0-3-2-7-7-14z" fill="${color}" stroke="#fff" stroke-width="1.5"/></svg>
+      <span class="hydro-label" style="border-color:${color};color:${color}">${h.lvl}m</span>
+    </div>`;
+    pinsEl.appendChild(el);
+  });
+  document.getElementById('out').textContent='红点=城市校准点(黄=广州省会) 蓝点=水文站\n'+lines.join('\n');
+}
+
+window.addEventListener('resize',render);
+render();
+</script>
+</body>
+</html>

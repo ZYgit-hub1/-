@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>找红星</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}pre{padding:10px;font-size:12px;line-height:1.5}canvas{display:none}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837"></canvas>
+<pre id="out">分析中...</pre>
+<script>
+const img = new Image();
+img.onload = () => {
+  try {
+    const cv = document.getElementById('c');
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, 1024, 837);
+    const W=1024,H=837;
+    const data = ctx.getImageData(0,0,W,H).data;
+    const at=(x,y)=>{const i=(y*W+x)*4;return [data[i],data[i+1],data[i+2],data[i+3]];};
+    // 红星: R高, G低, B低 (R>180, G<100, B<100)
+    const isRedStar=(x,y)=>{const[r,g,b,a]=at(x,y);return a>200&&r>180&&g<110&&b<110;};
+    
+    const reds=[];
+    for(let y=40;y<H-15;y++){
+      for(let x=0;x<W;x++){
+        if(isRedStar(x,y)) reds.push({x,y});
+      }
+    }
+    if(reds.length===0){document.getElementById('out').textContent='无红星';return;}
+    // 聚类红星(连通)
+    const clusters=[];
+    const visited=new Set();
+    reds.forEach(r=>{
+      const key=r.x+','+r.y;
+      if(visited.has(key))return;
+      const stack=[r];const cluster=[];
+      while(stack.length){
+        const p=stack.pop();
+        const k=p.x+','+p.y;
+        if(visited.has(k))continue;
+        visited.add(k);
+        cluster.push(p);
+        // 4邻接
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+          const nx=p.x+dx,ny=p.y+dy;
+          if(nx>=0&&nx<W&&ny>=0&&ny<H&&isRedStar(nx,ny)&&!visited.has(nx+','+ny)){
+            stack.push({x:nx,y:ny});
+          }
+        });
+      }
+      if(cluster.length>3) clusters.push(cluster);
+    });
+    const result = clusters.map(c=>{
+      let minX=W,maxX=0,minY=H,maxY=0;
+      c.forEach(p=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;});
+      return {cnt:c.length,cx:Math.round((minX+maxX)/2),cy:Math.round((minY+maxY)/2),minX,maxX,minY,maxY};
+    }).sort((a,b)=>b.cnt-a.cnt);
+    
+    // 同时找: 海洋边界(南海), 用于海岸线参考
+    const isOcean=(x,y)=>{const[r,g,b,a]=at(x,y);return a>128&&b>200&&b>r+15&&b>g+3&&r>165;};
+    // 每列海洋最北点(海岸线)
+    const coastline=[];
+    for(let x=0;x<W;x++){
+      for(let y=40;y<H;y++){
+        if(isOcean(x,y)){coastline.push({x,y});break;}
+      }
+    }
+    // 海岸线最北点(广东南海岸最南)
+    let cMinY=H,cMinX=0;
+    coastline.forEach(c=>{if(c.y<cMinY){cMinY=c.y;cMinX=c.x;}});
+    
+    document.getElementById('out').textContent =
+`红星聚类(${result.length}个):
+`+result.map((r,i)=>`  [${i}] 像素${r.cnt} 中心(${r.cx},${r.cy}) 边界x[${r.minX},${r.maxX}]y[${r.minY},${r.maxY}]
+   中心%: x=${(r.cx/W*100).toFixed(2)}% y=${(r.cy/H*100).toFixed(2)}%`).join('\n')+`
+
+海岸线最北点(南海岸最南端): (${cMinX},${cMinY}) %: x=${(cMinX/W*100).toFixed(2)}% y=${(cMinY/H*100).toFixed(2)}%
+`;
+  } catch(e) {
+    document.getElementById('out').textContent = 'ERR: '+e.message+'\n'+e.stack;
+  }
+};
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

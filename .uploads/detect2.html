@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>边界检测 v2</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}canvas{display:block;max-width:1024px;height:auto}div{padding:8px;font-size:13px;line-height:1.6}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837"></canvas>
+<div id="out"></div>
+<script>
+const img = new Image();
+img.onload = () => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const W = 1024, H = 837;
+  const data = ctx.getImageData(0,0,W,H).data;
+  const px = (x,y) => { const i=(y*W+x)*4; return [data[i],data[i+1],data[i+2],data[i+3]]; };
+  
+  // 广东省边界: 灰色阴影线 (R~180-220, G~180-220, B~180-220, 较深)
+  // 海洋: 浅蓝 (B高)
+  // 邻省: 浅灰偏暗
+  // 广东陆地: 纯白
+  // 省界线: 较深的灰色阴影
+  
+  // 先统计海洋区域(确定广东在南侧)
+  // 海洋在地图底部和右侧
+  const isOcean = (x,y) => {
+    const [r,g,b,a]=px(x,y);
+    return a>128 && b>200 && b>r+15 && b>g+5 && r>170;
+  };
+  
+  // 找广东陆地: 白色且不在标题/图例区
+  // 标题在顶部(y<40), 图例右下角, 邻省是浅灰
+  const isWhite = (x,y) => {
+    const [r,g,b,a]=px(x,y);
+    return a>128 && r>240 && g>240 && b>240;
+  };
+  
+  // 找每列的陆地范围(排除顶部标题区 y<45)
+  const colLand = [];
+  for(let x=0;x<W;x++){
+    let top=-1,bot=-1;
+    for(let y=45;y<H-20;y++){
+      if(isWhite(x,y)){
+        if(top<0)top=y;
+        bot=y;
+      }
+    }
+    colLand.push({x,top,bot});
+  }
+  
+  // 找每行的陆地范围
+  const rowLand = [];
+  for(let y=45;y<H-20;y++){
+    let l=-1,r=-1;
+    for(let x=0;x<W;x++){
+      if(isWhite(x,y)){
+        if(l<0)l=x;
+        r=x;
+      }
+    }
+    rowLand.push({y,l,r});
+  }
+  
+  // 陆地(白色,排除标题区)的边界框
+  let minX=W,maxX=0,minY=H,maxY=0;
+  colLand.forEach(c=>{
+    if(c.top>=0){
+      // 检查这列是否有连续白色(广东陆地) vs 邻省
+      if(c.x<minX && c.bot>45)minX=c.x;
+      if(c.x>maxX && c.bot>45)maxX=c.x;
+    }
+  });
+  rowLand.forEach(r=>{
+    if(r.l>=0){
+      if(r.l<minX)minX=r.l;
+      if(r.r>maxX)maxX=r.r;
+      if(r.y<minY)minY=r.y;
+      if(r.y>maxY)maxY=r.y;
+    }
+  });
+  
+  // 更精确: 广东陆地的边界(连续大块白色)
+  // 找最大的白色连通区域的外接框 - 简化版: 统计每行白色像素数, 找连续大块
+  const rowCounts = [];
+  for(let y=45;y<H-15;y++){
+    let cnt=0;
+    for(let x=0;x<W;x++){
+      if(isWhite(x,y))cnt++;
+    }
+    rowCounts.push({y,cnt});
+  }
+  // 找白色像素最多的行作为广东中心区域
+  rowCounts.sort((a,b)=>b.cnt-a.cnt);
+  const peakRows = rowCounts.slice(0,20).map(r=>r.y).sort((a,b)=>a-b);
+  const peakY = peakRows[Math.floor(peakRows.length/2)];
+  
+  // 在峰值行找陆地左右边界
+  let landL=W,landR=0;
+  for(let x=0;x<W;x++){
+    if(isWhite(x,peakY)){
+      if(x<landL)landL=x;
+      landR=x;
+    }
+  }
+  
+  const out = document.getElementById('out');
+  out.innerHTML = `
+    <h3>白色(陆地)边界(排除顶部标题)</h3>
+    <p>minX=${minX} (${(minX/W*100).toFixed(1)}%), maxX=${maxX} (${(maxX/W*100).toFixed(1)}%)</p>
+    <p>minY=${minY} (${(minY/H*100).toFixed(1)}%), maxY=${maxY} (${(maxY/H*100).toFixed(1)}%)</p>
+    <p>陆地宽: ${maxX-minX}, 高: ${maxY-minY}, 宽高比: ${((maxX-minX)/(maxY-minY)).toFixed(3)}</p>
+    <h3>峰值行(陆地最宽处)</h3>
+    <p>peakY=${peakY} (${(peakY/H*100).toFixed(1)}%)</p>
+    <p>陆地左右: L=${landL} (${(landL/W*100).toFixed(1)}%), R=${landR} (${(landR/W*100).toFixed(1)}%), 宽=${landR-landL}</p>
+    <h3>海洋范围</h3>
+    <p>(之前: minX=35, maxX=980, minY=49, maxY=783)</p>
+    <p>地图内容区大致: x[35,980], y[49,783]</p>
+  `;
+  // 画框
+  ctx.strokeStyle='#ef4444'; ctx.lineWidth=3;
+  ctx.strokeRect(minX,minY,maxX-minX,maxY-minY);
+  ctx.strokeStyle='#22c55e'; ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,peakY);ctx.lineTo(W,peakY);ctx.stroke();
+  ctx.strokeStyle='#3b82f6';
+  ctx.strokeRect(landL,peakY-3,landR-landL,6);
+};
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

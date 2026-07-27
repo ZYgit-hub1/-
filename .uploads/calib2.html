@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>地图校准工具 v2</title>
+<style>
+  body { margin: 0; background: #1a1a1a; color: #fff; font-family: monospace; }
+  .calib-wrap { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+  .map-stage {
+    position: relative;
+    width: 820px;
+    height: 670px;
+    background: #0f172a;
+  }
+  .map-image { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.92; }
+  .ref-pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #000, 0 2px 6px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .ref-pin::after {
+    content: attr(data-label);
+    position: absolute;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    background: rgba(0,0,0,0.85);
+    color: #fde047;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .controls {
+    margin-top: 12px;
+    background: #0f172a;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.8;
+    width: 820px;
+  }
+  .controls label { display: inline-block; width: 55px; }
+  .controls input[type=range] { width: 200px; vertical-align: middle; }
+  .val { color: #38bdf8; display: inline-block; width: 50px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="calib-wrap">
+  <div class="map-stage" id="stage">
+    <img src="/src/assets/guangdong-map.png" class="map-image" id="mapImg" alt="map"/>
+    <div id="pins"></div>
+  </div>
+  <div class="controls">
+    <div class="row">
+      <div><label>minLng</label><input type="range" id="minLng" min="108" max="112" step="0.02" value="109.4"/><span class="val" id="minLngV"></span></div>
+      <div><label>maxLng</label><input type="range" id="maxLng" min="116" max="120" step="0.02" value="117.6"/><span class="val" id="maxLngV"></span></div>
+    </div>
+    <div class="row">
+      <div><label>minLat</label><input type="range" id="minLat" min="18" max="22" step="0.02" value="20.0"/><span class="val" id="minLatV"></span></div>
+      <div><label>maxLat</label><input type="range" id="maxLat" min="25" max="27" step="0.02" value="25.9"/><span class="val" id="maxLatV"></span></div>
+    </div>
+    <div class="row">
+      <div><label>padX%</label><input type="range" id="padX" min="0" max="12" step="0.5" value="4"/><span class="val" id="padXV"></span></div>
+      <div><label>padY%</label><input type="range" id="padY" min="0" max="12" step="0.5" value="4"/><span class="val" id="padYV"></span></div>
+    </div>
+    <div style="margin-top:8px;color:#94a3b8">调整滑块使红点对齐地图上的城市名标记。广州(红星)、深圳、汕头、湛江、韶关、梅州是关键校准点。</div>
+  </div>
+</div>
+<script>
+  const REFS = [
+    { name: '广州', lng: 113.27, lat: 23.13, star: true },
+    { name: '深圳', lng: 114.06, lat: 22.55 },
+    { name: '珠海', lng: 113.58, lat: 22.28 },
+    { name: '汕头', lng: 116.68, lat: 23.35 },
+    { name: '湛江', lng: 110.36, lat: 21.27 },
+    { name: '韶关', lng: 113.60, lat: 24.81 },
+    { name: '梅州', lng: 116.12, lat: 24.29 },
+    { name: '河源', lng: 114.70, lat: 23.74 },
+    { name: '清远', lng: 113.06, lat: 23.68 },
+    { name: '茂名', lng: 110.93, lat: 21.66 },
+    { name: '阳江', lng: 111.98, lat: 21.86 },
+    { name: '潮州', lng: 116.65, lat: 23.66 },
+    { name: '肇庆', lng: 112.47, lat: 23.05 },
+    { name: '揭阳', lng: 116.37, lat: 23.55 },
+    { name: '汕尾', lng: 115.37, lat: 22.79 },
+    { name: '云浮', lng: 112.04, lat: 22.93 },
+    { name: '江门', lng: 113.08, lat: 22.58 },
+    { name: '中山', lng: 113.39, lat: 22.52 },
+    { name: '东莞', lng: 113.75, lat: 23.05 },
+    { name: '佛山', lng: 113.12, lat: 23.02 },
+    { name: '惠州', lng: 114.38, lat: 23.08 },
+  ];
+  const inputs = ['minLng','maxLng','minLat','maxLat','padX','padY'];
+  const pinsEl = document.getElementById('pins');
+  function render() {
+    const p = {};
+    inputs.forEach(k => p[k] = parseFloat(document.getElementById(k).value));
+    inputs.forEach(k => document.getElementById(k+'V').textContent = p[k]);
+    pinsEl.innerHTML = '';
+    REFS.forEach(r => {
+      const x = p.padX + ((r.lng - p.minLng) / (p.maxLng - p.minLng)) * (100 - 2*p.padX);
+      const y = p.padY + ((p.maxLat - r.lat) / (p.maxLat - p.minLat)) * (100 - 2*p.padY);
+      const pin = document.createElement('div');
+      pin.className = 'ref-pin';
+      pin.style.left = x + '%';
+      pin.style.top = y + '%';
+      pin.style.background = r.star ? '#facc15' : '#ef4444';
+      pin.setAttribute('data-label', r.name);
+      pinsEl.appendChild(pin);
+    });
+  }
+  inputs.forEach(k => document.getElementById(k).addEventListener('input', render));
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>找标记</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}pre{padding:10px;font-size:12px;line-height:1.5}canvas{display:none}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837"></canvas>
+<pre id="out">分析中...</pre>
+<script>
+const img = new Image();
+img.onload = () => {
+  try {
+    const cv = document.getElementById('c');
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, 1024, 837);
+    const W=1024,H=837;
+    const data = ctx.getImageData(0,0,W,H).data;
+    const at=(x,y)=>{const i=(y*W+x)*4;return [data[i],data[i+1],data[i+2],data[i+3]];};
+    
+    // 统计颜色直方图 - 找显著的非灰非白非蓝颜色
+    const colorBuckets={};
+    for(let y=40;y<H-15;y++){
+      for(let x=0;x<W;x++){
+        const [r,g,b,a]=at(x,y);
+        if(a<200)continue;
+        // 跳过白色/浅灰
+        if(r>230&&g>230&&b>230)continue;
+        // 跳过蓝色(海洋/河流)
+        if(b>180&&b>r+10&&b>g)continue;
+        // 跳过纯黑文字
+        if(r<80&&g<80&&b<80)continue;
+        // 跳过浅灰
+        if(Math.abs(r-g)<15&&Math.abs(g-b)<15&&r>150&&r<230)continue;
+        // 剩下的"彩色"像素
+        // 量化到16级
+        const qr=Math.round(r/16),qg=Math.round(g/16),qb=Math.round(b/16);
+        const key=qr+','+qg+','+qb;
+        colorBuckets[key]=(colorBuckets[key]||0)+1;
+      }
+    }
+    const sorted=Object.entries(colorBuckets).sort((a,b)=>b[1]-a[1]).slice(0,15);
+    
+    // 找红色系(R>G+40, R>B+40)
+    const redPixels=[];
+    for(let y=40;y<H-15;y++){
+      for(let x=0;x<W;x++){
+        const [r,g,b,a]=at(x,y);
+        if(a>200&&r>150&&r>g+40&&r>b+40){
+          redPixels.push({x,y});
+        }
+      }
+    }
+    // 聚类红色
+    const visited=new Set();
+    const clusters=[];
+    redPixels.forEach(p=>{
+      const k=p.x+','+p.y;if(visited.has(k))return;
+      const stack=[p];const cl=[];
+      while(stack.length){
+        const q=stack.pop();const qk=q.x+','+q.y;
+        if(visited.has(qk))continue;visited.add(qk);cl.push(q);
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+          const nx=q.x+dx,ny=q.y+dy;
+          if(nx>=0&&nx<W&&ny>=0&&ny<H){
+            const[r2,g2,b2,a2]=at(nx,ny);
+            if(a2>200&&r2>150&&r2>g2+40&&r2>b2+40&&!visited.has(nx+','+ny))stack.push({x:nx,y:ny});
+          }
+        });
+      }
+      if(cl.length>5)clusters.push(cl);
+    });
+    const redInfo=clusters.map(c=>{
+      let minX=W,maxX=0,minY=H,maxY=0;
+      c.forEach(p=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;});
+      return {cnt:c.length,cx:Math.round((minX+maxX)/2),cy:Math.round((minY+maxY)/2),w:maxX-minX,h:maxY-minY};
+    }).sort((a,b)=>b.cnt-a.cnt).slice(0,8);
+    
+    document.getElementById('out').textContent =
+`颜色桶Top15:
+`+sorted.map(([k,v])=>`  ${k} -> ${v}`).join('\n')+`
+
+红色聚类(>5像素): ${redInfo.length}个
+`+redInfo.map((r,i)=>`  [${i}] 像素${r.cnt} 中心(${r.cx},${r.cy}) 尺寸${r.w}x${r.h} %:(${(r.cx/W*100).toFixed(1)}%,${(r.cy/H*100).toFixed(1)}%)`).join('\n');
+  } catch(e) {
+    document.getElementById('out').textContent = 'ERR: '+e.message+'\n'+e.stack;
+  }
+};
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

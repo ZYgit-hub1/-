@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>广州红星定位</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace}pre{padding:10px;font-size:12px;line-height:1.5}canvas{display:none}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="837"></canvas>
+<pre id="out">分析中...</pre>
+<script>
+const img = new Image();
+img.onload = () => {
+  try {
+    const cv = document.getElementById('c');
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, 1024, 837);
+    const W=1024,H=837;
+    const data = ctx.getImageData(0,0,W,H).data;
+    const at=(x,y)=>{const i=(y*W+x)*4;return [data[i],data[i+1],data[i+2],data[i+3]];};
+    
+    // 广州是省会,用红星标记。红星颜色: 偏红,饱和度高
+    // 检测: R>B+30 且 R>120 且 B<150 (排除浅色)
+    const isReddish=(x,y)=>{const[r,g,b,a]=at(x,y);return a>200&&r>120&&r>b+25&&r>g+10&&b<160&&!(r>230&&g>230&&b>230);};
+    
+    const reds=[];
+    for(let y=40;y<H-15;y++)for(let x=0;x<W;x++)if(isReddish(x,y))reds.push({x,y});
+    
+    // 聚类
+    const visited=new Set();
+    const clusters=[];
+    reds.forEach(p=>{
+      const k=p.x+','+p.y;if(visited.has(k))return;
+      const stack=[p];const cl=[];
+      while(stack.length){
+        const q=stack.pop();const qk=q.x+','+q.y;
+        if(visited.has(qk))continue;visited.add(qk);cl.push(q);
+        [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dx,dy])=>{
+          const nx=q.x+dx,ny=q.y+dy;
+          if(nx>=0&&nx<W&&ny>=0&&ny<H&&!visited.has(nx+','+ny)&&isReddish(nx,ny))stack.push({x:nx,y:ny});
+        });
+      }
+      if(cl.length>2)clusters.push(cl);
+    });
+    const info=clusters.map(c=>{
+      let minX=W,maxX=0,minY=H,maxY=0;
+      c.forEach(p=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;});
+      const cx=Math.round((minX+maxX)/2),cy=Math.round((minY+maxY)/2);
+      // 平均颜色
+      let ar=0,ag=0,ab=0;c.forEach(p=>{const[r,g,b]=at(p.x,p.y);ar+=r;ag+=g;ab+=b;});
+      ar=Math.round(ar/c.length);ag=Math.round(ag/c.length);ab=Math.round(ab/c.length);
+      return {cnt:c.length,cx,cy,w:maxX-minX+1,h:maxY-minY+1,avg:`rgb(${ar},${ag},${ab})`};
+    }).sort((a,b)=>b.cnt-a.cnt);
+    
+    // 也找蓝色海洋的最北点(广东南海岸)
+    const isOcean=(x,y)=>{const[r,g,b,a]=at(x,y);return a>128&&b>200&&b>r+15&&b>g+3&&r>165;};
+    // 每列海洋最北点
+    const coast=[];
+    for(let x=0;x<W;x++){
+      for(let y=40;y<H;y++){if(isOcean(x,y)){coast.push({x,y});break;}}
+    }
+    // 海岸线中,广东大陆海岸的最北点(y最小的)
+    let northCoast={x:0,y:H};
+    coast.forEach(c=>{if(c.y<northCoast.y)northCoast=c;});
+    
+    // 海洋最东、最西、最南
+    let oE={x:0,y:0},oW={x:W,y:0},oS={x:0,y:0};
+    coast.forEach(c=>{if(c.x>oE.x)oE=c;if(c.x<oW.x)oW=c;});
+    let oSouthY=0,oSouthX=0;
+    for(let x=0;x<W;x++)for(let y=H-1;y>0;y--){if(isOcean(x,y)){if(y>oSouthY){oSouthY=y;oSouthX=x;}break;}}
+    
+    document.getElementById('out').textContent =
+`红色聚类(>2像素, 共${info.length}个):
+`+info.slice(0,12).map((r,i)=>`  [${i}] px=${r.cnt} 中心(${r.cx},${r.cy}) 尺寸${r.w}x${r.h} ${r.avg} %:(${(r.cx/W*100).toFixed(1)}%,${(r.cy/H*100).toFixed(1)}%)`).join('\n')+`
+
+海洋海岸线最北点(大陆南海岸): (${northCoast.x},${northCoast.y}) %:(${(northCoast.x/W*100).toFixed(1)}%,${(northCoast.y/H*100).toFixed(1)}%)
+海洋西端: (${oW.x},${oW.y}) 东端: (${oE.x},${oE.y})
+海洋最南: (${oSouthX},${oSouthY})
+`;
+  } catch(e) {
+    document.getElementById('out').textContent = 'ERR: '+e.message+'\n'+e.stack;
+  }
+};
+img.src = '/src/assets/guangdong-map.png';
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>精确校准</title>
+<style>body{margin:0;background:#111;color:#eee;font-family:monospace;padding:10px}
+.map-wrap{position:relative;width:1024px;height:837px;margin:0 auto}
+.map-wrap img{position:absolute;inset:0;width:100%;height:100%}
+.pin{position:absolute;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;
+  border:3px solid #fff;box-shadow:0 0 0 2px #000;background:#ef4444;pointer-events:none;z-index:5}
+.pin::after{content:attr(data-l);position:absolute;top:22px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;background:#000;color:#fde047;font-size:11px;padding:1px 5px;border-radius:3px;font-weight:700}
+pre{font-size:12px;line-height:1.5;margin-top:10px}</style>
+</head>
+<body>
+<div class="map-wrap" id="mw">
+  <img src="/src/assets/guangdong-map.png"/>
+  <div id="pins"></div>
+</div>
+<pre id="out"></pre>
+<script>
+// 4个校准点: 经纬度 -> 通过调整映射到地图上
+// 广州 113.27,23.13 (省会红星)
+// 汕头 116.68,23.35 (粤东角)
+// 湛江 110.36,21.27 (粤西/雷州)
+// 韶关 113.60,24.81 (粤北)
+
+// 假设地图是线性投影(经纬度线性映射到像素)
+// 像素 = A*lng + B*lat + C (x), D*lng + E*lat + F (y)
+// 用4个点解6个未知数(最小二乘)
+
+// 先用一组猜测的边界测试
+const tests = [
+  {name:'当前边界', minLng:109.5,maxLng:118.0,minLat:19.8,maxLat:26.0, padX:6, padY:6},
+  {name:'紧凑边界', minLng:109.6,maxLng:117.3,minLat:20.0,maxLat:25.6, padX:4, padY:5},
+  {name:'含海域', minLng:109.4,maxLng:117.8,minLat:19.5,maxLat:25.9, padX:5, padY:6},
+];
+let cur = tests[1]; // 用紧凑边界
+
+const REFS = [
+  { name: '广州', lng: 113.27, lat: 23.13, star: true },
+  { name: '深圳', lng: 114.06, lat: 22.55 },
+  { name: '珠海', lng: 113.58, lat: 22.28 },
+  { name: '汕头', lng: 116.68, lat: 23.35 },
+  { name: '湛江', lng: 110.36, lat: 21.27 },
+  { name: '韶关', lng: 113.60, lat: 24.81 },
+  { name: '梅州', lng: 116.12, lat: 24.29 },
+  { name: '河源', lng: 114.70, lat: 23.74 },
+  { name: '清远', lng: 113.06, lat: 23.68 },
+  { name: '茂名', lng: 110.93, lat: 21.66 },
+  { name: '阳江', lng: 111.98, lat: 21.86 },
+  { name: '潮州', lng: 116.65, lat: 23.66 },
+  { name: '肇庆', lng: 112.47, lat: 23.05 },
+  { name: '汕尾', lng: 115.37, lat: 22.79 },
+  { name: '云浮', lng: 112.04, lat: 22.93 },
+  { name: '江门', lng: 113.08, lat: 22.58 },
+];
+
+const pinsEl = document.getElementById('pins');
+function render(){
+  pinsEl.innerHTML='';
+  const lines=[];
+  REFS.forEach(r=>{
+    const x = cur.padX + ((r.lng - cur.minLng)/(cur.maxLng-cur.minLng))*(100-2*cur.padX);
+    const y = cur.padY + ((cur.maxLat - r.lat)/(cur.maxLat-cur.minLat))*(100-2*cur.padY);
+    const pin=document.createElement('div');
+    pin.className='pin';
+    pin.style.left=x+'%';pin.style.top=y+'%';
+    pin.style.background=r.star?'#facc15':'#ef4444';
+    pin.setAttribute('data-l',r.name);
+    pinsEl.appendChild(pin);
+    lines.push(`${r.name}: x=${x.toFixed(1)}% y=${y.toFixed(1)}%`);
+  });
+  document.getElementById('out').textContent = `当前: ${cur.name}\n`+lines.join('\n');
+}
+render();
+</script>
+</body>
+</html>
