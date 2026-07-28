@@ -1,0 +1,33 @@
+# ==================== bootstrap.yml（Nacos 配置中心引导配置） ====================
+# 该文件由 Spring Cloud Bootstrap 加载，优先级高于 application.yml
+spring:
+  application:
+    name: user-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  cloud:
+    nacos:
+      # -------------------- 配置中心 --------------------
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        # 配置文件 dataId = ${prefix}-${profile}.${file-extension}
+        # 即 user-service-dev.yaml
+        prefix: user-service
+        file-extension: yaml
+        # 共享配置（所有微服务公用）
+        shared-configs:
+          - data-id: application-common.yaml
+            refresh: true
+        # 是否启用配置中心
+        enabled: true
+        # 自动刷新
+        refresh-enabled: true
+      # -------------------- 服务发现 --------------------
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}

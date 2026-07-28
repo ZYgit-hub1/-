@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: alert-service
+  cloud:
+    nacos:
+      # ==================== Nacos 服务发现 ====================
+      discovery:
+        server-addr: localhost:8848
+        namespace: energy-monitor
+        group: DEFAULT_GROUP
+        ip: localhost
+      # ==================== Nacos 配置中心 ====================
+      config:
+        server-addr: localhost:8848
+        namespace: energy-monitor
+        group: DEFAULT_GROUP
+        file-extension: yaml
+        # 拉取的主配置：alert-service-dev.yaml
+        shared-configs:
+          - data-id: alert-service-${spring.profiles.active:dev}.yaml
+            group: DEFAULT_GROUP
+            refresh: true
+        # 开启配置刷新
+        refresh-enabled: true
+
+# 允许 Spring Cloud Bootstrap 上下文加载
+spring.config.import: optional:nacos:alert-service-${spring.profiles.active:dev}.yaml

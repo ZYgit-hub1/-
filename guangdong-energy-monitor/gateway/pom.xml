@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ==================== 父 POM ==================== -->
+    <parent>
+        <groupId>com.huadianguangdong</groupId>
+        <artifactId>energy-monitor-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../parent-pom.xml</relativePath>
+    </parent>
+
+    <!-- ==================== 模块坐标 ==================== -->
+    <artifactId>energy-monitor-gateway</artifactId>
+    <packaging>jar</packaging>
+    <name>energy-monitor-gateway</name>
+    <description>广东省电厂监控平台 - API 网关（Spring Cloud Gateway / WebFlux 响应式）</description>
+
+    <!--
+        ==================== 依赖说明 ====================
+        本模块为响应式（Reactive / WebFlux）应用，禁止引入 spring-boot-starter-web。
+        common 模块中的 spring-boot-starter-web 为 provided 作用域，不会传递至此，
+        故不会污染 WebFlux 运行栈。
+    -->
+    <dependencies>
+        <!-- Spring Cloud Gateway（基于 WebFlux，切勿引入 spring-boot-starter-web） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+
+        <!-- Nacos 服务发现 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+        <!-- Nacos 配置中心 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <!-- Sentinel 流控熔断 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
+        <!-- 响应式 Redis（网关层做限流 / 缓存使用，非 servlet 栈） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+        </dependency>
+
+        <!-- Bucket4j 令牌桶限流 -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+            <version>8.7.0</version>
+        </dependency>
+
+        <!-- 内部公共模块（提供 JwtUtil / R / ResultCode） -->
+        <dependency>
+            <groupId>com.huadianguangdong</groupId>
+            <artifactId>energy-monitor-common</artifactId>
+        </dependency>
+
+        <!-- Springdoc OpenAPI（WebFlux 版） -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

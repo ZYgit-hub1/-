@@ -1,0 +1,82 @@
+# ==================== 公共配置（供各服务模块通过 spring.profiles.include: common 引入） ====================
+spring:
+  application:
+    name: ${APP_NAME:energy-monitor-service}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # -------------------- Nacos 服务发现 --------------------
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+
+  # -------------------- Redis --------------------
+  redis:
+    host: ${REDIS_HOST:127.0.0.1}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 16
+        max-idle: 8
+        min-idle: 2
+        max-wait: 3000ms
+
+  # -------------------- Kafka --------------------
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:127.0.0.1:9092}
+    producer:
+      retries: 3
+      acks: 1
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:energy-monitor-group}
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    listener:
+      ack-mode: record
+      concurrency: 3
+
+# -------------------- 服务端口 --------------------
+server:
+  port: ${SERVER_PORT:8080}
+
+# -------------------- MyBatis-Plus --------------------
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.huadianguangdong.*.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# -------------------- JWT --------------------
+jwt:
+  secret: ${JWT_SECRET:huadianguangdong-energy-monitor-secret-key-must-be-32-bytes}
+  expire: ${JWT_EXPIRE:7200000}
+
+# -------------------- 日志 --------------------
+logging:
+  level:
+    root: INFO
+    com.huadianguangdong: DEBUG
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%t] %-40.40logger{39} : %m%n%wEx"

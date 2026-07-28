@@ -1,0 +1,250 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: collector-service
+  profiles:
+    active: dev
+
+  # ==================== 数据源（Druid + PostgreSQL/PostGIS） ====================
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/energy_monitor?currentSchema=public&ApplicationName=collector-service
+    username: postgres
+    password: postgres
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=1000
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        reset-enable: false
+        login-username: admin
+        login-password: admin
+
+  # ==================== TDengine 时序数据源（RESTful 模式） ====================
+  datasource.tdengine:
+    url: jdbc:TAOS-RS://localhost:6041/energy_monitor
+    username: root
+    password: taosdata
+    driver-class-name: com.taosdata.jdbc.rs.RestfulDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 600000
+
+  # ==================== JPA / Hibernate ====================
+  jpa:
+    hibernate:
+      ddl-auto: none  # 使用 DDL 脚本管理表结构
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc.batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  # ==================== Redis ====================
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 3
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 5000ms
+
+  # ==================== Kafka ====================
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      # Key 序列化
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Value 序列化
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 重试次数
+      retries: 3
+      # 批量大小
+      batch-size: 16384
+      # 批量等待时间
+      properties:
+        linger.ms: 1
+      # 缓冲区大小
+      buffer-memory: 33554432
+      # acks：all 表示所有副本确认
+      acks: all
+    consumer:
+      group-id: collector-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  # ==================== Jackson ====================
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# ==================== MyBatis-Plus ====================
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.huadianguangdong.collector.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+# ==================== 外部数据源 ====================
+external:
+  weather:
+    # 气象 API 地址（旧配置，兼容）
+    api-url: https://restapi.amap.com/v3/weather/weatherInfo
+  hydro:
+    # 水文 API 地址
+    api-url: https://api.hydro.example.com/water-level
+
+# ==================== 采集调度配置 ====================
+collector:
+  # 气象采集：每 5 分钟一次
+  weather:
+    cron: "0 0/5 * * * ?"
+    city: 广州
+    plant-id: 1
+    # 主数据源：广东省气象局 open.gd121.cn
+    primary:
+      url: https://open.gd121.cn/api/v1/weather/observe
+      api-key: ${GD121_API_KEY:gd121-dev-key-001}
+    # 备用数据源：中央气象台 weather.cma.cn
+    fallback:
+      url: https://weather.cma.cn/api/weather/observe
+      api-key: ${CMA_API_KEY:cma-dev-key-001}
+    # 健康检查：连续失败 3 次切换备用源
+    fail-threshold: 3
+    # 探测间隔：60 秒尝试切回主源
+    probe-interval-sec: 60
+    # ==================== 清洗阈值配置（可动态调整） ====================
+    cleaning:
+      enabled: true                    # 是否启用清洗（false 保留原始值）
+      temp-min: -40.0                  # 温度下限（℃）
+      temp-max: 60.0                   # 温度上限（℃），超此值标记 null
+      humidity-min: 0.0                # 湿度下限（%）
+      humidity-max: 100.0              # 湿度上限（%）
+      wind-speed-min: 0.0              # 风速下限（m/s）
+      wind-speed-max: 62.0             # 风速上限（m/s），17 级风
+      wind-dir-min: 0                  # 风向下限（°）
+      wind-dir-max: 359                # 风向上限（°）
+      rain-min: 0.0                    # 降雨量下限（mm）
+      rain-max: 500.0                  # 降雨量上限（mm），单小时极端降雨
+      pressure-min: 800.0              # 气压下限（hPa）
+      pressure-max: 1100.0             # 气压上限（hPa）
+  # 水文采集：每 5 分钟一次
+  hydro:
+    cron: "0 0/5 * * * ?"
+    station-code: GD001
+    station-id: 1
+  # 应急采集：每 30 分钟一次
+  emergency:
+    cron: "0 0/30 * * * ?"
+
+# ==================== Resilience4j 配置 ====================
+resilience4j:
+  retry:
+    instances:
+      weatherApiRetry:
+        max-attempts: 3                # 最多重试 3 次（含首次调用）
+        wait-duration: 1s              # 重试间隔 1 秒
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException$ServiceUnavailable
+          - org.springframework.web.reactive.function.client.WebClientResponseException$GatewayTimeout
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+        ignore-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException$BadRequest
+          - org.springframework.web.reactive.function.client.WebClientResponseException$Unauthorized
+  circuitbreaker:
+    instances:
+      weatherApiCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10         # 滑动窗口 10 次调用
+        minimum-number-of-calls: 5      # 至少 5 次调用后才开始计算
+        failure-rate-threshold: 50      # 50% 错误率触发熔断
+        wait-duration-in-open-state: 30s  # 熔断打开 30 秒
+        permitted-number-of-calls-in-half-open-state: 3  # 半开状态允许 3 次探测
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException$ServiceUnavailable
+          - org.springframework.web.reactive.function.client.WebClientResponseException$GatewayTimeout
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+  timelimiter:
+    instances:
+      weatherApiTimeLimiter:
+        timeout-duration: 5s            # 超时 5 秒
+  ratelimiter:
+    instances:
+      weatherApiRateLimiter:
+        # ---- 生产推荐配置 ----
+        # 气象 API 频率约束：1 次/秒（主源 open.gd121.cn），9 站点 × 1 次/5min = 峰值 9 次
+        # 10 次/10s 留出 1 次安全余量，避免正常采集 + 切换重试叠加时触发限流
+        limit-for-period: 10            # 每个刷新周期允许 10 次调用
+        limit-refresh-period: 10s       # 刷新周期 10 秒（等效 1 次/秒）
+        timeout-duration: 0             # 超出限流立即拒绝（不等待），防止级联阻塞
+        register-health-indicator: true  # 暴露 Actuator 健康指标
+        # ---- 调优参考 ----
+        # 若气象 API 频率限制放宽至 5 次/秒：
+        #   limit-for-period: 50  +  limit-refresh-period: 10s
+        # 若需在突发场景（如切换重试）短暂超限：
+        #   timeout-duration: 500ms（等待 500ms 获取许可，而非立即拒绝）
+
+# ==================== Springdoc OpenAPI ====================
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.huadianguangdong.collector.controller
+
+# ==================== 服务暴露（Actuator 简化） ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: INFO
+    com.huadianguangdong: DEBUG
+    com.alibaba.druid: INFO

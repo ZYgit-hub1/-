@@ -1,0 +1,93 @@
+package com.huadianguangdong.alert.rules
+
+// ==================== 导入 ====================
+import com.huadianguangdong.common.dto.HydroDataDTO;
+import com.huadianguangdong.common.dto.AlertEventDTO;
+import com.huadianguangdong.alert.fact.HydroFact;
+import com.huadianguangdong.alert.fact.AlertEventCollector;
+
+// ==================== Global ====================
+// 报警动作服务（兼容旧规则直接回调）
+global com.huadianguangdong.alert.service.AlertActionService alertService;
+// 报警事件收集器（规则匹配后收集 AlertEventDTO，由 RuleEngineService 统一处理）
+global com.huadianguangdong.alert.fact.AlertEventCollector alertCollector;
+
+// ============================================================================
+// 规则类型 1：STATIC_THRESHOLD —— 静态阈值
+// ============================================================================
+
+// 规则 1：超警戒水位（静态阈值）
+rule "超警戒水位-静态阈值"
+    salience 40
+    no-loop true
+    when
+        $fact : HydroFact(waterLevel > warningLevel, alertLevel == "warning")
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(1L)
+            .ruleName("超警戒水位-静态阈值")
+            .logicType("static_threshold")
+            .ruleType("hydro")
+            .plantId(null)
+            .stationId($fact.getHydroData() != null ? $fact.getHydroData().getStationId() : null)
+            .level("high")
+            .content("超警戒水位")
+            .metric("water_level")
+            .metricValue($fact.getWaterLevel())
+            .threshold($fact.getWarningLevel())
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// 规则 2：超保证水位（静态阈值，紧急）
+rule "超保证水位-静态阈值"
+    salience 50
+    no-loop true
+    when
+        $fact : HydroFact(alertLevel == "flood")
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(2L)
+            .ruleName("超保证水位-静态阈值")
+            .logicType("static_threshold")
+            .ruleType("hydro")
+            .plantId(null)
+            .stationId($fact.getHydroData() != null ? $fact.getHydroData().getStationId() : null)
+            .level("emergency")
+            .content("超保证水位，紧急")
+            .metric("water_level")
+            .metricValue($fact.getWaterLevel())
+            .threshold($fact.getGuaranteeLevel())
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// ============================================================================
+// 规则类型 4：TREND_WARNING —— 趋势预警
+// ============================================================================
+
+// 规则 3：水位暴涨趋势预警
+rule "水位暴涨-趋势预警"
+    salience 30
+    no-loop true
+    when
+        $fact : HydroFact(trend == "rising", waterLevel > 10)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(3L)
+            .ruleName("水位暴涨-趋势预警")
+            .logicType("trend_warning")
+            .ruleType("hydro")
+            .plantId(null)
+            .stationId($fact.getHydroData() != null ? $fact.getHydroData().getStationId() : null)
+            .level("medium")
+            .content("水位快速上涨")
+            .metric("water_level_trend")
+            .metricValue($fact.getWaterLevel())
+            .threshold(10.0)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end

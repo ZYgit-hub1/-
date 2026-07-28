@@ -1,0 +1,179 @@
+/* ============================================
+   Energy Monitor Dashboard - Design Tokens
+   Brand prefix: energy
+   ============================================ */
+
+/* --- Color Palette --- */
+:root {
+  /* Backgrounds */
+  --energy-bg: #0a0e1a;
+  --energy-surface: #111827;
+  --energy-surface-2: #1e293b;
+  --energy-surface-hover: #263249;
+
+  /* Brand / Accent */
+  --energy-primary: #06b6d4;
+  --energy-primary-dim: rgba(6, 182, 212, 0.15);
+  --energy-primary-glow: rgba(6, 182, 212, 0.4);
+
+  /* Text */
+  --energy-text-primary: #f1f5f9;
+  --energy-text-secondary: #94a3b8;
+  --energy-text-muted: #64748b;
+
+  /* Borders */
+  --energy-border: #1e293b;
+  --energy-border-light: #334155;
+
+  /* Functional Colors */
+  --energy-success: #22c55e;
+  --energy-warning: #eab308;
+  --energy-danger: #ef4444;
+  --energy-info: #3b82f6;
+  --energy-orange: #f97316;
+
+  /* Plant Type Colors */
+  --energy-plant-coal: #94a3b8;
+  --energy-plant-gas: #06b6d4;
+  --energy-plant-solar: #eab308;
+  --energy-plant-wind: #22c55e;
+
+  /* Warning Levels */
+  --energy-warn-blue: #3b82f6;
+  --energy-warn-yellow: #eab308;
+  --energy-warn-orange: #f97316;
+  --energy-warn-red: #ef4444;
+
+  /* Hydro Status */
+  --energy-hydro-safe: #22c55e;
+  --energy-hydro-caution: #eab308;
+  --energy-hydro-danger: #ef4444;
+
+  /* Chart */
+  --energy-chart-grid: rgba(30, 41, 59, 0.6);
+  --energy-chart-line-1: #06b6d4;
+  --energy-chart-line-2: #94a3b8;
+  --energy-chart-line-3: #eab308;
+
+  /* Spacing */
+  --energy-space-xs: 4px;
+  --energy-space-sm: 8px;
+  --energy-space-md: 16px;
+  --energy-space-lg: 24px;
+  --energy-space-xl: 32px;
+
+  /* Radius */
+  --energy-radius-sm: 4px;
+  --energy-radius-md: 8px;
+  --energy-radius-lg: 12px;
+
+  /* Shadows */
+  --energy-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --energy-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --energy-shadow-glow: 0 0 20px rgba(6, 182, 212, 0.15);
+
+  /* Typography */
+  --energy-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --energy-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Sizing */
+  --energy-header-h: 56px;
+  --energy-bottom-h: 200px;
+  --energy-panel-radius: var(--energy-radius-md);
+
+  /* Semantic Aliases (required by apply-html-head-contract) */
+  --energy-foreground: var(--energy-text-primary);
+  --energy-card: var(--energy-surface);
+  --energy-muted: var(--energy-text-muted);
+  --energy-accent: var(--energy-primary);
+  --energy-accent-foreground: #0a0e1a;
+  --energy-border-semantic: var(--energy-border);
+}
+
+/* --- Typography Scale --- */
+.energy-text-hero {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-body {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--energy-text-secondary);
+}
+
+.energy-text-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--energy-text-muted);
+}
+
+.energy-text-kpi {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-data {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+/* --- Component Tokens --- */
+.energy-panel {
+  background: var(--energy-surface);
+  border: 1px solid var(--energy-border);
+  border-radius: var(--energy-panel-radius);
+}
+
+.energy-panel-glow {
+  box-shadow: var(--energy-shadow-glow);
+}
+
+.energy-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.energy-tag-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.energy-tag-yellow { background: rgba(234,179,8,0.15); color: #facc15; }
+.energy-tag-orange { background: rgba(249,115,22,0.15); color: #fb923c; }
+.energy-tag-red { background: rgba(239,68,68,0.15); color: #f87171; }
+.energy-tag-green { background: rgba(34,197,94,0.15); color: #4ade80; }

@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广东省电厂监控大屏</title>
+    <style id="theme-vars">
+/* ============================================
+   Energy Monitor Dashboard - Design Tokens
+   Brand prefix: energy
+   ============================================ */
+
+/* --- Color Palette --- */
+:root {
+  /* Backgrounds */
+  --energy-bg: #0a0e1a;
+  --energy-surface: #111827;
+  --energy-surface-2: #1e293b;
+  --energy-surface-hover: #263249;
+
+  /* Brand / Accent */
+  --energy-primary: #06b6d4;
+  --energy-primary-dim: rgba(6, 182, 212, 0.15);
+  --energy-primary-glow: rgba(6, 182, 212, 0.4);
+
+  /* Text */
+  --energy-text-primary: #f1f5f9;
+  --energy-text-secondary: #94a3b8;
+  --energy-text-muted: #64748b;
+
+  /* Borders */
+  --energy-border: #1e293b;
+  --energy-border-light: #334155;
+
+  /* Functional Colors */
+  --energy-success: #22c55e;
+  --energy-warning: #eab308;
+  --energy-danger: #ef4444;
+  --energy-info: #3b82f6;
+  --energy-orange: #f97316;
+
+  /* Plant Type Colors */
+  --energy-plant-coal: #94a3b8;
+  --energy-plant-gas: #06b6d4;
+  --energy-plant-solar: #eab308;
+  --energy-plant-wind: #22c55e;
+
+  /* Warning Levels */
+  --energy-warn-blue: #3b82f6;
+  --energy-warn-yellow: #eab308;
+  --energy-warn-orange: #f97316;
+  --energy-warn-red: #ef4444;
+
+  /* Hydro Status */
+  --energy-hydro-safe: #22c55e;
+  --energy-hydro-caution: #eab308;
+  --energy-hydro-danger: #ef4444;
+
+  /* Chart */
+  --energy-chart-grid: rgba(30, 41, 59, 0.6);
+  --energy-chart-line-1: #06b6d4;
+  --energy-chart-line-2: #94a3b8;
+  --energy-chart-line-3: #eab308;
+
+  /* Spacing */
+  --energy-space-xs: 4px;
+  --energy-space-sm: 8px;
+  --energy-space-md: 16px;
+  --energy-space-lg: 24px;
+  --energy-space-xl: 32px;
+
+  /* Radius */
+  --energy-radius-sm: 4px;
+  --energy-radius-md: 8px;
+  --energy-radius-lg: 12px;
+
+  /* Shadows */
+  --energy-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --energy-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --energy-shadow-glow: 0 0 20px rgba(6, 182, 212, 0.15);
+
+  /* Typography */
+  --energy-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --energy-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Sizing */
+  --energy-header-h: 56px;
+  --energy-bottom-h: 200px;
+  --energy-panel-radius: var(--energy-radius-md);
+
+  /* Semantic Aliases (required by apply-html-head-contract) */
+  --energy-foreground: var(--energy-text-primary);
+  --energy-card: var(--energy-surface);
+  --energy-muted: var(--energy-text-muted);
+  --energy-accent: var(--energy-primary);
+  --energy-accent-foreground: #0a0e1a;
+  --energy-border-semantic: var(--energy-border);
+}
+
+/* --- Typography Scale --- */
+.energy-text-hero {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-body {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--energy-text-secondary);
+}
+
+.energy-text-label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--energy-text-muted);
+}
+
+.energy-text-kpi {
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--energy-text-primary);
+}
+
+.energy-text-data {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--energy-text-primary);
+}
+
+/* --- Component Tokens --- */
+.energy-panel {
+  background: var(--energy-surface);
+  border: 1px solid var(--energy-border);
+  border-radius: var(--energy-panel-radius);
+}
+
+.energy-panel-glow {
+  box-shadow: var(--energy-shadow-glow);
+}
+
+.energy-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.energy-tag-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.energy-tag-yellow { background: rgba(234,179,8,0.15); color: #facc15; }
+.energy-tag-orange { background: rgba(249,115,22,0.15); color: #fb923c; }
+.energy-tag-red { background: rgba(239,68,68,0.15); color: #f87171; }
+.energy-tag-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--energy-foreground);
+    --color-card: var(--energy-card);
+    --color-primary: var(--energy-primary);
+    --color-muted: var(--energy-muted);
+    --color-accent: var(--energy-accent);
+    --color-accent-foreground: var(--energy-accent-foreground);
+    --color-border: var(--energy-border);
+    --color-background: var(--energy-bg);
+    --radius-sm: var(--energy-radius-sm);
+    --radius-md: var(--energy-radius-md);
+    --radius-lg: var(--energy-radius-lg);
+  }
+  @layer base {
+    body { background: var(--energy-bg); color: var(--energy-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-foreground { background-color: var(--energy-foreground); }
+      .text-foreground { color: var(--energy-foreground); }
+      .border-foreground { border-color: var(--energy-foreground); }
+      .ring-foreground { --tw-ring-color: var(--energy-foreground); }
+      .bg-card { background-color: var(--energy-card); }
+      .text-card { color: var(--energy-card); }
+      .border-card { border-color: var(--energy-card); }
+      .ring-card { --tw-ring-color: var(--energy-card); }
+      .bg-primary { background-color: var(--energy-primary); }
+      .text-primary { color: var(--energy-primary); }
+      .border-primary { border-color: var(--energy-primary); }
+      .ring-primary { --tw-ring-color: var(--energy-primary); }
+      .bg-muted { background-color: var(--energy-muted); }
+      .text-muted { color: var(--energy-muted); }
+      .border-muted { border-color: var(--energy-muted); }
+      .ring-muted { --tw-ring-color: var(--energy-muted); }
+      .bg-accent { background-color: var(--energy-accent); }
+      .text-accent { color: var(--energy-accent); }
+      .border-accent { border-color: var(--energy-accent); }
+      .ring-accent { --tw-ring-color: var(--energy-accent); }
+      .bg-accent-foreground { background-color: var(--energy-accent-foreground); }
+      .text-accent-foreground { color: var(--energy-accent-foreground); }
+      .border-accent-foreground { border-color: var(--energy-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--energy-accent-foreground); }
+      .bg-border { background-color: var(--energy-border); }
+      .text-border { color: var(--energy-border); }
+      .border-border { border-color: var(--energy-border); }
+      .ring-border { --tw-ring-color: var(--energy-border); }
+      .bg-background { background-color: var(--energy-bg); }
+      .text-background { color: var(--energy-bg); }
+      .border-background { border-color: var(--energy-bg); }
+      .ring-background { --tw-ring-color: var(--energy-bg); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+    <!-- ===================== CRITICAL LAYOUT CSS ===================== -->
+    <style id="critical-layout">
+      html, body {
+        height: 100vh;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        background: var(--energy-bg);
+        color: var(--energy-text-primary);
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+      /* ===== Map marker styles (aligned with frontend AMap implementation) ===== */
+      /* Plant pin: circular badge with type emoji + warning-level color */
+      .plant-pin {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.95);
+        background: var(--pin-color, #22d3ee);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 5;
+        padding: 0;
+        box-shadow:
+          0 0 4px rgba(255,255,255,0.7),
+          0 0 10px var(--pin-color, #22d3ee),
+          0 2px 6px rgba(0,0,0,0.5);
+        transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+      }
+      .plant-pin:hover {
+        transform: translate(-50%, -50%) scale(1.5);
+        z-index: 8;
+        box-shadow:
+          0 0 6px rgba(255,255,255,0.9),
+          0 0 16px var(--pin-color, #22d3ee),
+          0 2px 8px rgba(0,0,0,0.6);
+      }
+      .plant-pin-icon {
+        font-size: 13px;
+        line-height: 1;
+        font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+      }
+      .plant-pin-pulse {
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        border: 2px solid var(--pin-color, #22d3ee);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .plant-pin.is-warning .plant-pin-pulse {
+        animation: pin-pulse 1.6s ease-out infinite;
+      }
+      .plant-pin-label {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 5px;
+        font-size: 10px;
+        font-weight: 600;
+        color: #e2e8f0;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      }
+      .plant-pin:hover .plant-pin-label { opacity: 1; }
+
+      @keyframes pin-pulse {
+        0% { transform: scale(0.9); opacity: 0.7; }
+        100% { transform: scale(2.2); opacity: 0; }
+      }
+
+      /* Hydro station pin: small house-shaped anchor with trend icon */
+      .hydro-pin {
+        position: absolute;
+        transform: translate(-50%, -100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        cursor: pointer;
+        z-index: 6;
+        padding: 0;
+        border: none;
+        background: none;
+      }
+      .hydro-pin-drop {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--pin-color, #22d3ee);
+        border: 1.5px solid rgba(255,255,255,0.95);
+        box-shadow: 0 0 6px var(--pin-color, #22d3ee), 0 1px 3px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .hydro-pin-trend {
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--pin-color, #22d3ee);
+      }
+      .hydro-pin.is-alert .hydro-pin-drop {
+        animation: hydro-alert-pulse 1.4s ease-in-out infinite;
+      }
+      .hydro-pin-label {
+        font-size: 9px;
+        font-weight: 500;
+        color: #94a3b8;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      }
+      .hydro-pin:hover .hydro-pin-label { opacity: 1; }
+
+      @keyframes hydro-alert-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+      }
+
+      /* Plant detail popover (aligned with frontend InfoWindow) */
+      .map-popover {
+        position: absolute;
+        transform: translate(-50%, calc(-100% - 14px));
+        z-index: 20;
+        width: 220px;
+        background: linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(10,14,26,0.98) 100%);
+        border: 1px solid var(--pin-color, #22d3ee);
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 16px var(--pin-color, #22d3ee);
+        padding: 12px;
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      .map-popover.popover-below {
+        transform: translate(-50%, 14px);
+      }
+      .map-popover::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: rgba(10,14,26,0.98);
+        border-right: 1px solid var(--pin-color, #22d3ee);
+        border-bottom: 1px solid var(--pin-color, #22d3ee);
+      }
+      .map-popover.popover-below::after {
+        bottom: auto;
+        top: -6px;
+        border-right: none;
+        border-bottom: none;
+        border-left: 1px solid var(--pin-color, #22d3ee);
+        border-top: 1px solid var(--pin-color, #22d3ee);
+      }
+      .map-popover-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      .map-popover-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+      .map-popover-row .row-label { color: #94a3b8; }
+      .map-popover-row .row-value { color: #e2e8f0; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .map-popover-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--pin-color, #22d3ee);
+        color: #0a0e1a;
+      }
+
+      /* Hydro row */
+      .hydro-row {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--energy-border);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        transition: background 0.15s;
+      }
+      .hydro-row:last-child { border-bottom: none; }
+      .hydro-row:hover { background: var(--energy-surface-2); }
+      .hydro-header { display: flex; align-items: center; justify-content: space-between; }
+      .hydro-level-bar {
+        height: 3px;
+        border-radius: 2px;
+        background: var(--energy-surface-2);
+        overflow: hidden;
+      }
+      .hydro-level-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+      .hydro-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+    </style>
+
+    <!-- ===================== DASHBOARD CONTENT ===================== -->
+    <div data-viewport-mode="app-shell" style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--energy-bg);color:var(--energy-text-primary);font-family:var(--energy-font-family);">
+      <div data-scroll-region="primary" style="flex:1;overflow:auto;">
+
+        <div id="dashboard" style="display:grid;grid-template-rows:56px auto 1fr 200px;grid-template-columns:22% 56% 22%;height:100vh;gap:0;padding:0;">
+
+          <!-- HEADER -->
+          <header id="dash-header" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--energy-surface);border-bottom:1px solid var(--energy-border);z-index:10;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <i data-lucide="activity" style="width:28px;height:28px;color:var(--energy-primary);"></i>
+              <h1 style="font-size:20px;font-weight:700;letter-spacing:0.04em;color:var(--energy-text-primary);margin:0;">广东省电厂监控平台</h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:24px;">
+              <span id="header-datetime" style="font-size:13px;color:var(--energy-text-secondary);font-variant-numeric:tabular-nums;"></span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--energy-success);display:inline-block;box-shadow:0 0 6px rgba(34,197,94,0.6);"></span>
+                <span style="font-size:12px;color:var(--energy-success);font-weight:600;">系统正常</span>
+              </div>
+            </div>
+          </header>
+
+          <!-- STATS ROW -->
+          <div id="stats-row" style="grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px 24px;">
+
+            <!-- KPI 1 -->
+            <div class="energy-panel" style="display:flex;align-items:center;gap:16px;padding:16px 24px;">
+              <div style="width:44px;height:44px;border-radius:8px;background:var(--energy-primary-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="zap" style="width:22px;height:22px;color:var(--energy-primary);"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:500;color:var(--energy-text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">总装机容量</div>
+                <div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--energy-text-primary);">7,100</div>
+                <div style="font-size:12px;color:var(--energy-text-secondary);margin-top:2px;">MW</div>
+              </div>
+            </div>
+
+            <!-- KPI 2 -->
+            <div class="energy-panel" style="display:flex;align-items:center;gap:16px;padding:16px 24px;">
+              <div style="width:44px;height:44px;border-radius:8px;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="factory" style="width:22px;height:22px;color:var(--energy-success);"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:500;color:var(--energy-text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">运行电厂</div>
+                <div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--energy-text-primary);">8 <span style="font-size:14px;font-weight:400;color:var(--energy-text-muted);">/ 9</span></div>
+                <div style="font-size:12px;color:var(--energy-text-secondary);margin-top:2px;">座</div>
+              </div>
+            </div>
+
+            <!-- KPI 3 -->
+            <div class="energy-panel" style="display:flex;align-items:center;gap:16px;padding:16px 24px;">
+              <div style="width:44px;height:44px;border-radius:8px;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="alert-triangle" style="width:22px;height:22px;color:var(--energy-danger);"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:500;color:var(--energy-text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">活跃预警</div>
+                <div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--energy-danger);">3</div>
+                <div style="font-size:12px;color:var(--energy-text-secondary);margin-top:2px;">条</div>
+              </div>
+            </div>
+
+            <!-- KPI 4 -->
+            <div class="energy-panel" style="display:flex;align-items:center;gap:16px;padding:16px 24px;">
+              <div style="width:44px;height:44px;border-radius:8px;background:rgba(6,182,212,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i data-lucide="wifi" style="width:22px;height:22px;color:var(--energy-primary);"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:500;color:var(--energy-text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;">设备在线率</div>
+                <div style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;color:var(--energy-success);">98.6%</div>
+                <div style="font-size:12px;color:var(--energy-text-secondary);margin-top:2px;">
+                  <i data-lucide="trending-up" style="width:12px;height:12px;display:inline;vertical-align:-2px;color:var(--energy-success);"></i> 较昨日 +0.2%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEFT PANEL: 水文监测 -->
+          <section style="padding:16px 16px 16px 24px;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="energy-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="padding:16px 24px;border-bottom:1px solid var(--energy-border);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <i data-lucide="droplets" style="width:16px;height:16px;color:var(--energy-primary);"></i>
+                <h2 style="font-size:14px;font-weight:600;color:var(--energy-text-primary);margin:0;">水文监测</h2>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:8px;">
+                <div id="hydro-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CENTER: MAP -->
+          <section style="padding:16px;overflow:hidden;">
+            <div class="energy-panel energy-panel-glow" style="height:100%;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="padding:14px 24px;border-bottom:1px solid var(--energy-border);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+                <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--energy-primary);"></i>
+                <h2 style="font-size:14px;font-weight:600;color:var(--energy-text-primary);margin:0;">广东省电厂分布</h2>
+                <span style="font-size:11px;color:var(--energy-text-muted);margin-left:4px;">华电集团 · 9座电厂 · 6水文站</span>
+                <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+                  <span style="font-size:10px;color:var(--energy-text-muted);font-weight:600;letter-spacing:0.04em;">预警等级</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:#22d3ee;display:inline-block;box-shadow:0 0 4px #22d3ee;"></span>正常</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:#00d4ff;display:inline-block;box-shadow:0 0 4px #00d4ff;"></span>关注</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:#fbbf24;display:inline-block;box-shadow:0 0 4px #fbbf24;"></span>警告</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:#fb923c;display:inline-block;box-shadow:0 0 4px #fb923c;"></span>严重</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:#ff2e9f;display:inline-block;box-shadow:0 0 4px #ff2e9f;"></span>紧急</span>
+                  <span style="width:1px;height:12px;background:var(--energy-border);margin:0 4px;"></span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:rgba(7,9,26,0.6);border:1.5px solid #22d3ee;display:inline-block;"></span>水文站</span>
+                </div>
+              </div>
+              <div id="map-container" style="flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at center, #0f1535 0%, #07091a 100%);box-shadow:inset 0 0 0 1px rgba(0,212,255,0.25), inset 0 0 60px rgba(0,212,255,0.08);">
+                <!-- Map stage: keeps image aspect ratio (3690/2599 ≈ 1.420) so % coords align to image pixels -->
+                <div id="map-stage" style="position:absolute;top:0;left:0;right:0;bottom:0;margin:auto;flex:0 0 auto;">
+                  <img src="../assets/guangdong-hydro-map.png" alt="广东省水系图" draggable="false" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;user-select:none;-webkit-user-drag:none;filter:brightness(1.1) contrast(1.05) saturate(1.1) drop-shadow(0 12px 28px rgba(0,0,0,0.5));" />
+                  <!-- City reference labels -->
+                  <div id="map-city-labels" style="position:absolute;inset:0;z-index:2;pointer-events:none;"></div>
+                  <!-- Plant + hydro pins -->
+                  <div id="map-markers" style="position:absolute;inset:0;z-index:3;"></div>
+                  <!-- Detail popover layer -->
+                  <div id="map-popover-layer" style="position:absolute;inset:0;z-index:20;pointer-events:none;"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT PANEL: 气象预警 -->
+          <section style="padding:16px 24px 16px 16px;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="energy-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="padding:16px 24px;border-bottom:1px solid var(--energy-border);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <i data-lucide="cloud-lightning" style="width:16px;height:16px;color:var(--energy-warning);"></i>
+                <h2 style="font-size:14px;font-weight:600;color:var(--energy-text-primary);margin:0;">气象预警</h2>
+                <span class="energy-tag energy-tag-red" style="margin-left:auto;">3条生效中</span>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:8px;">
+                <!-- Warning 1: 暴雨黄色 -->
+                <div style="margin-bottom:8px;padding:16px;background:var(--energy-surface-2);border-radius:8px;border-left:3px solid var(--energy-warn-yellow);">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <i data-lucide="cloud-rain" style="width:16px;height:16px;color:var(--energy-warn-yellow);"></i>
+                    <span class="energy-tag energy-tag-yellow">黄色预警</span>
+                    <span style="margin-left:auto;font-size:11px;color:var(--energy-text-muted);">韶关市</span>
+                  </div>
+                  <div style="font-size:13px;font-weight:600;color:var(--energy-text-primary);margin-bottom:4px;">暴雨黄色预警</div>
+                  <div style="font-size:12px;color:var(--energy-text-secondary);line-height:1.5;margin-bottom:6px;">预计未来6小时降雨量将达50mm以上，请做好防汛准备。</div>
+                  <div style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;">
+                    <i data-lucide="clock" style="width:11px;height:11px;"></i> 有效期至 2026-07-28 08:00
+                  </div>
+                </div>
+                <!-- Warning 2: 台风橙色 -->
+                <div style="margin-bottom:8px;padding:16px;background:var(--energy-surface-2);border-radius:8px;border-left:3px solid var(--energy-warn-orange);">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <i data-lucide="wind" style="width:16px;height:16px;color:var(--energy-warn-orange);"></i>
+                    <span class="energy-tag energy-tag-orange">橙色预警</span>
+                    <span style="margin-left:auto;font-size:11px;color:var(--energy-text-muted);">汕头市</span>
+                  </div>
+                  <div style="font-size:13px;font-weight:600;color:var(--energy-text-primary);margin-bottom:4px;">台风橙色预警</div>
+                  <div style="font-size:12px;color:var(--energy-text-secondary);line-height:1.5;margin-bottom:6px;">台风"银河"预计今晚在汕头沿海登陆，风力达12级。</div>
+                  <div style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;">
+                    <i data-lucide="clock" style="width:11px;height:11px;"></i> 有效期至 2026-07-28 12:00
+                  </div>
+                </div>
+                <!-- Warning 3: 高温红色 -->
+                <div style="margin-bottom:8px;padding:16px;background:var(--energy-surface-2);border-radius:8px;border-left:3px solid var(--energy-warn-red);">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <i data-lucide="thermometer" style="width:16px;height:16px;color:var(--energy-warn-red);"></i>
+                    <span class="energy-tag energy-tag-red">红色预警</span>
+                    <span style="margin-left:auto;font-size:11px;color:var(--energy-text-muted);">广州市</span>
+                  </div>
+                  <div style="font-size:13px;font-weight:600;color:var(--energy-text-primary);margin-bottom:4px;">高温红色预警</div>
+                  <div style="font-size:12px;color:var(--energy-text-secondary);line-height:1.5;margin-bottom:6px;">广州市气温已达40度，请做好防暑降温措施。</div>
+                  <div style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;">
+                    <i data-lucide="clock" style="width:11px;height:11px;"></i> 有效期至 2026-07-28 18:00
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- BOTTOM: 功率趋势图 -->
+          <section style="grid-column:1/-1;padding:0 24px 16px 24px;overflow:hidden;">
+            <div class="energy-panel" style="height:100%;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="padding:8px 24px;border-bottom:1px solid var(--energy-border);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <i data-lucide="trending-up" style="width:16px;height:16px;color:var(--energy-primary);"></i>
+                <h2 style="font-size:14px;font-weight:600;color:var(--energy-text-primary);margin:0;">电厂功率趋势（24h）</h2>
+                <div style="margin-left:auto;display:flex;gap:16px;">
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;border-radius:2px;background:var(--energy-chart-line-1);display:inline-block;"></span>广州华电</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;border-radius:2px;background:var(--energy-chart-line-2);display:inline-block;"></span>汕头华电</span>
+                  <span style="font-size:11px;color:var(--energy-text-muted);display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;border-radius:2px;background:var(--energy-chart-line-3);display:inline-block;"></span>深圳华电</span>
+                </div>
+              </div>
+              <div style="flex:1;padding:8px 16px 16px;min-height:0;">
+                <canvas id="powerChart" style="width:100%;height:100%;"></canvas>
+              </div>
+            </div>
+          </section>
+
+        </div><!-- end #dashboard -->
+      </div><!-- end scroll-region -->
+    </div><!-- end viewport -->
+
+    <!-- ===================== APPLICATION SCRIPTS ===================== -->
+    <script>
+    // Clock
+    (function() {
+      function updateClock() {
+        var now = new Date();
+        var y = now.getFullYear();
+        var mo = String(now.getMonth()+1).padStart(2,'0');
+        var d = String(now.getDate()).padStart(2,'0');
+        var h = String(now.getHours()).padStart(2,'0');
+        var mi = String(now.getMinutes()).padStart(2,'0');
+        var s = String(now.getSeconds()).padStart(2,'0');
+        var days = ['日','一','二','三','四','五','六'];
+        var el = document.getElementById('header-datetime');
+        if (el) el.textContent = y+'-'+mo+'-'+d+' 周'+days[now.getDay()]+' '+h+':'+mi+':'+s;
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+    })();
+
+    // Hydro Stations
+    (function() {
+      var stations = [
+        { name:'高要水文站', basin:'西江', level:8.7, warn:9.5, guarantee:13.0 },
+        { name:'石角水文站', basin:'北江', level:10.8, warn:11.0, guarantee:14.5 },
+        { name:'河源水文站', basin:'东江', level:37.5, warn:39.0, guarantee:42.0 },
+        { name:'博罗水文站', basin:'东江', level:11.0, warn:11.2, guarantee:13.0 },
+        { name:'潮安水文站', basin:'韩江', level:13.2, warn:13.5, guarantee:15.5 },
+        { name:'化州水文站', basin:'鉴江', level:12.8, warn:13.5, guarantee:15.8 }
+      ];
+      var container = document.getElementById('hydro-list');
+      if (!container) return;
+      stations.forEach(function(s) {
+        var ratio = s.level / s.guarantee;
+        var color = ratio < 0.7 ? 'var(--energy-hydro-safe)' : ratio < 0.85 ? 'var(--energy-hydro-caution)' : 'var(--energy-hydro-danger)';
+        var barWidth = Math.min(ratio * 100, 100);
+        var statusText = ratio < 0.7 ? '正常' : ratio < 0.85 ? '关注' : '警戒';
+        var tagClass = ratio < 0.7 ? 'energy-tag-green' : ratio < 0.85 ? 'energy-tag-yellow' : 'energy-tag-red';
+        var row = document.createElement('div');
+        row.className = 'hydro-row';
+        row.innerHTML =
+          '<div class="hydro-header">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="font-size:13px;font-weight:600;color:var(--energy-text-primary);">' + s.name + '</span>' +
+              '<span class="hydro-tag" style="background:rgba(59,130,246,0.12);color:#60a5fa;">' + s.basin + '</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:' + color + ';">' + s.level.toFixed(1) + 'm</span>' +
+              '<span class="energy-tag ' + tagClass + '">' + statusText + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="hydro-level-bar"><div class="hydro-level-fill" style="width:' + barWidth + '%;background:' + color + ';"></div></div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--energy-text-muted);">' +
+            '<span>警戒: ' + s.warn + 'm</span><span>保证: ' + s.guarantee + 'm</span>' +
+          '</div>';
+        container.appendChild(row);
+      });
+    })();
+
+    // Map Markers (aligned with frontend PowerPlantMap.vue + useAmap.ts)
+    (function() {
+      // Projection bounds matching frontend MAP_BOUNDS (Guangdong + coastal waters)
+      var bounds = { lngMin: 109.55, lngMax: 117.40, latMin: 20.00, latMax: 25.55 };
+
+      function toPercent(lng, lat) {
+        // Match frontend: map content occupies [4%, 96%] x [6%, 92%] of the image area
+        var xPct = 4 + ((lng - bounds.lngMin) / (bounds.lngMax - bounds.lngMin)) * 92;
+        var yPct = 6 + ((bounds.latMax - lat) / (bounds.latMax - bounds.latMin)) * 86;
+        return { x: Math.max(1, Math.min(99, xPct)), y: Math.max(1, Math.min(99, yPct)) };
+      }
+
+      // Warning level colors (from useAmap.ts WARNING_COLORS)
+      var WARNING_COLORS = {
+        green: '#22d3ee',   // 正常
+        blue: '#00d4ff',    // 关注
+        yellow: '#fbbf24',  // 警告
+        orange: '#fb923c',  // 严重
+        red: '#ff2e9f'      // 紧急
+      };
+      var WARNING_NAMES = {
+        green: '正常', blue: '关注', yellow: '警告', orange: '严重', red: '紧急'
+      };
+      // Plant type emoji (from PowerPlantMap.vue plantTypeEmoji)
+      var TYPE_EMOJI = { coal: '🏭', gas: '⚡', solar: '☀️', wind: '🌬️', storage: '🔋' };
+      var TYPE_NAMES = { coal: '火电厂', gas: '燃气电厂', solar: '光伏电站', wind: '风电场', storage: '储能站' };
+
+      // Plant data (Huadian Guangdong plants from mock/data.ts, with warning levels)
+      var plants = [
+        { id:'hd-01', name:'汕头华电发电', type:'coal',   lng:116.6821, lat:23.3535, capacity:1200, warningLevel:'orange', address:'汕头市濠江区广澳港' },
+        { id:'hd-02', name:'福新广州能源', type:'gas',    lng:113.4056, lat:23.0456, capacity:1200, warningLevel:'green',  address:'广州市南沙区黄阁镇' },
+        { id:'hd-03', name:'清远华电能源', type:'gas',    lng:113.0624, lat:23.6821, capacity:600,  warningLevel:'green',  address:'清远市清城区石角镇' },
+        { id:'hd-04', name:'惠州华电能源', type:'gas',    lng:114.4123, lat:23.1115, capacity:900,  warningLevel:'yellow', address:'惠州市大亚湾石化区' },
+        { id:'hd-05', name:'坪石华电发电', type:'coal',   lng:113.0521, lat:25.2856, capacity:700,  warningLevel:'green',  address:'韶关乐昌市坪石镇' },
+        { id:'hd-06', name:'韶关华电热电', type:'coal',   lng:113.6024, lat:24.8123, capacity:700,  warningLevel:'blue',   address:'韶关市浈江区乐园镇' },
+        { id:'hd-07', name:'阳江海上风电', type:'wind',   lng:111.9821, lat:21.8635, capacity:500,  warningLevel:'green',  address:'阳江市阳西县溪头镇海域' },
+        { id:'hd-08', name:'新能源广州',   type:'solar',  lng:113.2644, lat:23.1291, capacity:400,  warningLevel:'green',  address:'广州市萝岗区开发区' },
+        { id:'hd-09', name:'深圳华电能源', type:'gas',    lng:114.0579, lat:22.5431, capacity:800,  warningLevel:'red',    address:'深圳市宝安区福永街道' }
+      ];
+
+      // Hydro stations (from mock/data.ts, with alert levels + trend)
+      var HYDRO_COLORS = { normal:'#22d3ee', watch:'#00d4ff', warning:'#fbbf24', flood:'#ff2e9f' };
+      var HYDRO_NAMES = { normal:'正常', watch:'关注', warning:'超警', flood:'超保' };
+      var TREND_ICON = { rising:'▲', falling:'▼', steady:'—' };
+      var hydroStations = [
+        { name:'高要水文站', lng:112.27, lat:23.05, river:'西江', alertLevel:'normal', trend:'steady', level:8.42 },
+        { name:'石角水文站', lng:112.96, lat:23.55, river:'北江', alertLevel:'warning', trend:'rising', level:11.83 },
+        { name:'河源水文站', lng:114.70, lat:23.74, river:'东江', alertLevel:'normal', trend:'falling', level:37.61 },
+        { name:'博罗水文站', lng:114.29, lat:23.17, river:'东江', alertLevel:'watch', trend:'rising', level:10.94 },
+        { name:'潮安水文站', lng:116.68, lat:23.46, river:'韩江', alertLevel:'normal', trend:'steady', level:12.16 },
+        { name:'化州水文站', lng:110.60, lat:21.66, river:'鉴江', alertLevel:'flood', trend:'rising', level:16.02 }
+      ];
+
+      // Reference city labels
+      var referenceCities = [
+        { name:'广州', lng:113.27, lat:23.13 },
+        { name:'深圳', lng:114.06, lat:22.55 },
+        { name:'珠海', lng:113.58, lat:22.28 },
+        { name:'汕头', lng:116.68, lat:23.35 },
+        { name:'湛江', lng:110.36, lat:21.27 },
+        { name:'韶关', lng:113.60, lat:24.81 }
+      ];
+
+      var container = document.getElementById('map-markers');
+      var cityLayer = document.getElementById('map-city-labels');
+      var popoverLayer = document.getElementById('map-popover-layer');
+      var mapContainer = document.getElementById('map-container');
+      var mapStage = document.getElementById('map-stage');
+      if (!container || !mapContainer) return;
+
+      // ===== Stage sizing: keep image aspect ratio (3690/2599 ≈ 1.420) so % coords align to image pixels =====
+      var MAP_IMAGE_RATIO = 3690 / 2599;
+      function updateStageSize() {
+        if (!mapContainer || !mapStage) return;
+        var cw = mapContainer.clientWidth;
+        var ch = mapContainer.clientHeight;
+        if (cw === 0 || ch === 0) return;
+        var w, h;
+        if (cw / ch > MAP_IMAGE_RATIO) {
+          // 容器更宽：按高度铺满
+          h = ch;
+          w = h * MAP_IMAGE_RATIO;
+        } else {
+          // 容器更高：按宽度铺满
+          w = cw;
+          h = w / MAP_IMAGE_RATIO;
+        }
+        mapStage.style.width = w + 'px';
+        mapStage.style.height = h + 'px';
+      }
+      updateStageSize();
+      if (typeof ResizeObserver !== 'undefined' && mapContainer) {
+        new ResizeObserver(updateStageSize).observe(mapContainer);
+      } else if (window.addEventListener) {
+        window.addEventListener('resize', updateStageSize);
+      }
+
+      // Render city labels
+      if (cityLayer) {
+        referenceCities.forEach(function(c) {
+          var pos = toPercent(c.lng, c.lat);
+          var el = document.createElement('span');
+          el.style.cssText = 'position:absolute;left:' + pos.x + '%;top:' + pos.y + '%;transform:translate(-50%,-50%);font-size:11px;font-weight:600;color:rgba(0,212,255,0.9);background:rgba(10,14,39,0.65);padding:1px 6px;border-radius:3px;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,0.9);pointer-events:none;letter-spacing:0.05em;';
+          el.textContent = c.name;
+          cityLayer.appendChild(el);
+        });
+      }
+
+      function isWarningLevel(level) {
+        return level === 'yellow' || level === 'orange' || level === 'red';
+      }
+
+      // Render plant pins
+      plants.forEach(function(p) {
+        var pos = toPercent(p.lng, p.lat);
+        var color = WARNING_COLORS[p.warningLevel] || WARNING_COLORS.green;
+        var emoji = TYPE_EMOJI[p.type] || '🏭';
+        var isWarn = isWarningLevel(p.warningLevel);
+
+        var pin = document.createElement('button');
+        pin.type = 'button';
+        pin.className = 'plant-pin' + (isWarn ? ' is-warning' : '');
+        pin.style.cssText = 'left:' + pos.x + '%;top:' + pos.y + '%;--pin-color:' + color + ';';
+        pin.title = p.name;
+        pin.innerHTML =
+          '<span class="plant-pin-icon">' + emoji + '</span>' +
+          '<span class="plant-pin-pulse"></span>' +
+          '<span class="plant-pin-label">' + p.name + '</span>';
+        pin.addEventListener('click', function(e) {
+          e.stopPropagation();
+          showPlantPopover(p, pos);
+        });
+        container.appendChild(pin);
+      });
+
+      // Render hydro station pins
+      hydroStations.forEach(function(h) {
+        var pos = toPercent(h.lng, h.lat);
+        var color = HYDRO_COLORS[h.alertLevel] || HYDRO_COLORS.normal;
+        var isAlert = h.alertLevel === 'warning' || h.alertLevel === 'flood';
+
+        var pin = document.createElement('button');
+        pin.type = 'button';
+        pin.className = 'hydro-pin' + (isAlert ? ' is-alert' : '');
+        pin.style.cssText = 'left:' + pos.x + '%;top:' + pos.y + '%;--pin-color:' + color + ';';
+        pin.title = h.name;
+        pin.innerHTML =
+          '<span class="hydro-pin-drop"><span class="hydro-pin-trend">' + (TREND_ICON[h.trend] || '—') + '</span></span>' +
+          '<span class="hydro-pin-label">' + h.name + '</span>';
+        pin.addEventListener('click', function(e) {
+          e.stopPropagation();
+          showHydroPopover(h, pos);
+        });
+        container.appendChild(pin);
+      });
+
+      // ===== Popover logic =====
+      function clearPopover() {
+        if (popoverLayer) popoverLayer.innerHTML = '';
+      }
+
+      function showPlantPopover(p, pos) {
+        clearPopover();
+        var color = WARNING_COLORS[p.warningLevel] || WARNING_COLORS.green;
+        var levelName = WARNING_NAMES[p.warningLevel] || '正常';
+        var typeName = TYPE_NAMES[p.type] || p.type;
+        var emoji = TYPE_EMOJI[p.type] || '🏭';
+        var flipDown = pos.y < 45;
+
+        var popover = document.createElement('div');
+        popover.className = 'map-popover' + (flipDown ? ' popover-below' : '');
+        popover.style.cssText = 'left:' + pos.x + '%;top:' + pos.y + '%;--pin-color:' + color + ';pointer-events:auto;';
+        popover.innerHTML =
+          '<div class="map-popover-title">' +
+            '<span style="font-size:16px;">' + emoji + '</span>' +
+            '<span style="flex:1;color:#f1f5f9;">' + p.name + '</span>' +
+            '<span class="map-popover-badge">' + levelName + '</span>' +
+          '</div>' +
+          '<div class="map-popover-row"><span class="row-label">电厂类型</span><span class="row-value">' + typeName + '</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">装机容量</span><span class="row-value">' + p.capacity + ' MW</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">所在地</span><span class="row-value">' + p.address + '</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">预警等级</span><span class="row-value" style="color:' + color + ';">' + levelName + '</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">运行状态</span><span class="row-value" style="color:#34d399;">正常运行</span></div>';
+        popoverLayer.appendChild(popover);
+      }
+
+      function showHydroPopover(h, pos) {
+        clearPopover();
+        var color = HYDRO_COLORS[h.alertLevel] || HYDRO_COLORS.normal;
+        var levelName = HYDRO_NAMES[h.alertLevel] || '正常';
+        var trendName = h.trend === 'rising' ? '涨' : (h.trend === 'falling' ? '落' : '平');
+        var flipDown = pos.y < 45;
+
+        var popover = document.createElement('div');
+        popover.className = 'map-popover' + (flipDown ? ' popover-below' : '');
+        popover.style.cssText = 'left:' + pos.x + '%;top:' + pos.y + '%;--pin-color:' + color + ';pointer-events:auto;';
+        popover.innerHTML =
+          '<div class="map-popover-title">' +
+            '<span style="font-size:14px;color:' + color + ';">◆</span>' +
+            '<span style="flex:1;color:#f1f5f9;">' + h.name + '</span>' +
+            '<span class="map-popover-badge">' + levelName + '</span>' +
+          '</div>' +
+          '<div class="map-popover-row"><span class="row-label">所属河流</span><span class="row-value">' + h.river + '</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">当前水位</span><span class="row-value">' + h.level.toFixed(2) + ' m</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">水势</span><span class="row-value" style="color:' + color + ';">' + trendName + ' ' + (TREND_ICON[h.trend] || '') + '</span></div>' +
+          '<div class="map-popover-row"><span class="row-label">告警等级</span><span class="row-value" style="color:' + color + ';">' + levelName + '</span></div>';
+        popoverLayer.appendChild(popover);
+      }
+
+      // Click map blank to close popover
+      mapContainer.addEventListener('click', function() {
+        clearPopover();
+      });
+    })();
+
+    // Chart.js Power Trend
+    (function() {
+      if (typeof Chart === 'undefined') return;
+      var ctx = document.getElementById('powerChart');
+      if (!ctx) return;
+      var labels = [], dataGZ = [], dataST = [], dataSZ = [];
+      for (var i = 0; i < 288; i++) {
+        var totalMin = i * 5;
+        var h = Math.floor(totalMin / 60);
+        var m = totalMin % 60;
+        labels.push(String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'));
+        var hour = h + m / 60;
+        var dayFactor = 0.7 + 0.3 * Math.sin((hour - 6) * Math.PI / 12);
+        if (hour < 6) dayFactor = 0.55 + Math.random() * 0.1;
+        if (hour > 22) dayFactor = 0.6 + Math.random() * 0.1;
+        dataGZ.push(Math.round(850 * dayFactor + (Math.random()-0.5)*60));
+        dataST.push(Math.round(950 * dayFactor + (Math.random()-0.5)*80));
+        dataSZ.push(Math.round(600 * dayFactor + (Math.random()-0.5)*50));
+      }
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label:'广州华电 (gas)', data:dataGZ, borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,0.08)', borderWidth:1.5, pointRadius:0, pointHoverRadius:3, tension:0.3, fill:false },
+            { label:'汕头华电 (coal)', data:dataST, borderColor:'#94a3b8', backgroundColor:'rgba(148,163,184,0.08)', borderWidth:1.5, pointRadius:0, pointHoverRadius:3, tension:0.3, fill:false },
+            { label:'深圳华电 (gas)', data:dataSZ, borderColor:'#eab308', backgroundColor:'rgba(234,179,8,0.08)', borderWidth:1.5, pointRadius:0, pointHoverRadius:3, tension:0.3, fill:false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode:'index', intersect:false },
+          plugins: {
+            legend: { display:false },
+            tooltip: {
+              backgroundColor:'rgba(17,24,39,0.95)',
+              borderColor:'#1e293b',
+              borderWidth:1,
+              titleColor:'#f1f5f9',
+              bodyColor:'#94a3b8',
+              padding:10,
+              titleFont:{ size:12, weight:'600' },
+              bodyFont:{ size:11 },
+              callbacks: {
+                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + ' MW'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color:'rgba(30,41,59,0.5)', drawBorder:false },
+              ticks: { color:'#64748b', font:{ size:10 }, maxTicksLimit:12, maxRotation:0 },
+              border: { display:false }
+            },
+            y: {
+              grid: { color:'rgba(30,41,59,0.5)', drawBorder:false },
+              ticks: { color:'#64748b', font:{ size:10 }, callback: function(v) { return v + ' MW'; } },
+              border: { display:false },
+              min: 0
+            }
+          }
+        }
+      });
+    })();
+
+    // Lucide Icons
+    lucide.createIcons();
+    </script>
+</body>
+</html>

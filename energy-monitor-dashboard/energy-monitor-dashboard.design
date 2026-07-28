@@ -1,0 +1,39 @@
+{
+  "data": [
+    {
+      "id": "page-dashboard",
+      "title": "监控大屏",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1753593600000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dashboard.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "广东省水系图底图",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1753593600000,
+      "canvasData": {
+        "x": 0,
+        "y": 377
+      },
+      "devMetadata": {
+        "imageSrc": "assets/guangdong-hydro-map.png"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "广东省电厂监控大屏"
+  }
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huadianguangdong.plant.mapper.PlantMapMapper">
+
+    <!--
+        查询可视边界范围内的电厂
+        1. PostGIS: ST_MakeEnvelope 构建 bbox，ST_Within 判断电厂是否落入可视区域
+        2. 关联 t_weather_warning：取每个电厂所在行政区划当前生效的最高预警等级
+        3. 预警等级排序：red(4) > orange(3) > yellow(2) > blue(1)
+        4. 通过 district_code 关联电厂与预警
+    -->
+    <select id="selectPlantsInBounds"
+            resultType="com.huadianguangdong.plant.dto.PlantMapRow">
+        SELECT
+            p.id             AS plant_id,
+            p.name           AS name,
+            p.type::text     AS type,
+            ST_X(p.location) AS lng,
+            ST_Y(p.location) AS lat,
+            sub_warning.max_warning_level AS warning_level,
+            sub_weather.latest_temp       AS latest_temp
+        FROM t_power_plant p
+        LEFT JOIN LATERAL (
+            -- 子查询：取该电厂所在行政区划当前生效的最高预警等级
+            SELECT
+                CASE w.level::text
+                    WHEN 'red'    THEN 4
+                    WHEN 'orange' THEN 3
+                    WHEN 'yellow' THEN 2
+                    WHEN 'blue'   THEN 1
+                    ELSE 0
+                END AS level_rank,
+                w.level::text AS max_warning_level
+            FROM t_weather_warning w
+            WHERE w.district_code = p.district_code
+              AND w.status = 'active'
+              AND (w.expire_time IS NULL OR w.expire_time > now())
+            ORDER BY level_rank DESC
+            LIMIT 1
+        ) sub_warning ON true
+        LEFT JOIN LATERAL (
+            -- 子查询：取该电厂最新温度（通过行政区划关联气象实况）
+            SELECT
+                (w.content_json->>'temperature')::double precision AS latest_temp
+            FROM t_weather_warning w
+            WHERE w.district_code = p.district_code
+              AND w.status = 'active'
+              AND w.type::text = 'high_temp'
+              AND (w.expire_time IS NULL OR w.expire_time > now())
+            ORDER BY w.publish_time DESC
+            LIMIT 1
+        ) sub_weather ON true
+        WHERE p.is_deleted = 0
+          AND p.location IS NOT NULL
+          AND ST_Within(
+                p.location,
+                ST_MakeEnvelope(#{minLng}, #{minLat}, #{maxLng}, #{maxLat}, 4326)
+              )
+        ORDER BY p.id ASC
+    </select>
+
+</mapper>

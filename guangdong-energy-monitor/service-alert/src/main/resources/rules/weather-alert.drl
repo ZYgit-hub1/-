@@ -1,0 +1,188 @@
+package com.huadianguangdong.alert.rules
+
+// ==================== 导入 ====================
+import com.huadianguangdong.common.dto.AlertEventDTO;
+import com.huadianguangdong.alert.fact.WeatherFact;
+import com.huadianguangdong.alert.fact.AlertEventCollector;
+
+// ==================== Global ====================
+// 报警动作服务（兼容旧规则直接回调）
+global com.huadianguangdong.alert.service.AlertActionService alertService;
+// 报警事件收集器（规则匹配后收集 AlertEventDTO，由 RuleEngineService 统一处理）
+global com.huadianguangdong.alert.fact.AlertEventCollector alertCollector;
+
+// ============================================================================
+// 规则类型 1：STATIC_THRESHOLD —— 静态阈值
+// 单一指标超过固定阈值即触发
+// ============================================================================
+
+// 规则 1.1：暴雨预警（降雨量 > 50mm/h）
+rule "暴雨预警-静态阈值"
+    salience 40
+    no-loop true
+    when
+        $fact : WeatherFact(rain1h != null, rain1h > 50.0)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(101L)
+            .ruleName("暴雨预警-静态阈值")
+            .logicType("static_threshold")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("high")
+            .content(String.format("暴雨预警：电厂[%d]过去1小时降雨量 %.1fmm 超过 50mm 阈值",
+                $fact.getPlantId(), $fact.getRain1h()))
+            .metric("rain1h")
+            .metricValue($fact.getRain1h().doubleValue())
+            .threshold(50.0)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// 规则 1.2：高温预警（温度 > 40℃）
+rule "高温预警-静态阈值"
+    salience 35
+    no-loop true
+    when
+        $fact : WeatherFact(temp != null, temp > 40.0)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(102L)
+            .ruleName("高温预警-静态阈值")
+            .logicType("static_threshold")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("high")
+            .content(String.format("高温预警：电厂[%d]当前温度 %.1f℃ 超过 40℃ 阈值",
+                $fact.getPlantId(), $fact.getTemp()))
+            .metric("temp")
+            .metricValue($fact.getTemp().doubleValue())
+            .threshold(40.0)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// 规则 1.3：大风预警（风速 > 17.2m/s，8级风）
+rule "大风预警-静态阈值"
+    salience 30
+    no-loop true
+    when
+        $fact : WeatherFact(windSpeed != null, windSpeed > 17.2)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(103L)
+            .ruleName("大风预警-静态阈值")
+            .logicType("static_threshold")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("medium")
+            .content(String.format("大风预警：电厂[%d]当前风速 %.1fm/s 超过 17.2m/s（8级风）",
+                $fact.getPlantId(), $fact.getWindSpeed()))
+            .metric("windSpeed")
+            .metricValue($fact.getWindSpeed().doubleValue())
+            .threshold(17.2)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// ============================================================================
+// 规则类型 2：DYNAMIC_DEVIATION —— 动态偏离
+// 当前值偏离滑动均值超过 N 个标准差即触发
+// 注：滑动均值/标准差由上游计算后注入 WeatherFact 的 pressure 字段做演示
+//     实际生产中应扩展 WeatherFact 增加 avgValue / stdDev 字段
+// ============================================================================
+
+// 规则 2.1：气压骤降预警（偏离基线 > 5hPa，可能极端天气前兆）
+rule "气压骤降-动态偏离"
+    salience 25
+    no-loop true
+    when
+        $fact : WeatherFact(pressure != null, pressure < 1000.0)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(201L)
+            .ruleName("气压骤降-动态偏离")
+            .logicType("dynamic_deviation")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("medium")
+            .content(String.format("气压异常：电厂[%d]当前气压 %.1fhPa 低于 1000hPa 基线，可能有极端天气",
+                $fact.getPlantId(), $fact.getPressure()))
+            .metric("pressure")
+            .metricValue($fact.getPressure().doubleValue())
+            .threshold(1000.0)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// ============================================================================
+// 规则类型 3：COMBO_LOGIC —— 组合逻辑
+// 多指标同时满足条件才触发（高温 + 低湿 + 强风 = 火灾风险）
+// ============================================================================
+
+// 规则 3.1：火灾风险组合预警（温度>35℃ 且 湿度<30% 且 风速>10m/s）
+rule "火灾风险-组合逻辑"
+    salience 50
+    no-loop true
+    when
+        $fact : WeatherFact(
+            temp != null, temp > 35.0,
+            humidity != null, humidity < 30.0,
+            windSpeed != null, windSpeed > 10.0
+        )
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(301L)
+            .ruleName("火灾风险-组合逻辑")
+            .logicType("combo_logic")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("emergency")
+            .content(String.format("火灾风险预警：电厂[%d] 高温(%.1f℃)+低湿(%.0f%%)+强风(%.1fm/s) 三条件同时满足",
+                $fact.getPlantId(), $fact.getTemp(), $fact.getHumidity(), $fact.getWindSpeed()))
+            .metric("combo_temp_humidity_wind")
+            .metricValue($fact.getTemp().doubleValue())
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end
+
+// ============================================================================
+// 规则类型 4：TREND_WARNING —— 趋势预警
+// 注：趋势判断需要连续多个采样点，此处用单条消息中的风向文本做简化演示
+//     生产环境中应通过 CEP（Complex Event Processing）窗口匹配连续事件
+// ============================================================================
+
+// 规则 4.1：持续强降雨趋势预警（降雨量持续 > 25mm/h）
+rule "持续降雨-趋势预警"
+    salience 20
+    no-loop true
+    when
+        $fact : WeatherFact(rain1h != null, rain1h > 25.0, rain1h <= 50.0)
+    then
+        AlertEventDTO event = AlertEventDTO.builder()
+            .ruleId(401L)
+            .ruleName("持续降雨-趋势预警")
+            .logicType("trend_warning")
+            .ruleType("weather")
+            .plantId($fact.getPlantId())
+            .districtCode($fact.getDistrictCode())
+            .level("low")
+            .content(String.format("降雨趋势预警：电厂[%d]降雨量 %.1fmm/h，持续降雨需关注",
+                $fact.getPlantId(), $fact.getRain1h()))
+            .metric("rain1h_trend")
+            .metricValue($fact.getRain1h().doubleValue())
+            .threshold(25.0)
+            .triggerTime(java.time.LocalDateTime.now())
+            .build();
+        alertCollector.add(event);
+end

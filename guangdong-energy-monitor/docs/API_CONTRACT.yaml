@@ -1,0 +1,2682 @@
+openapi: 3.0.3
+info:
+  title: 广东省电厂监控平台 API 契约
+  description: |
+    华电集团广东电厂监控平台后端接口契约文档。
+    所有接口统一通过 Gateway（8080）访问，需携带 JWT Token。
+    所有响应统一使用 R<T> 包装结构。
+    包含认证授权、用户管理、角色管理、组织架构、电厂管理、水文站管理、
+    GIS 空间服务、报警管理、预警管理、规则管理、统计分析、预测服务、数据采集共13个控制器、54个REST端点。
+  version: 1.0.0
+  contact:
+    name: 华电集团广东电厂监控平台研发组
+
+servers:
+  - url: http://localhost:8080
+    description: 本地开发环境（Gateway 入口）
+  - url: https://api.gd-energy.example.com
+    description: 生产环境
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: 认证授权
+    description: 用户登录、登出与Token刷新（AuthController）
+  - name: 用户管理
+    description: 用户增删改查（UserController）
+  - name: 角色管理
+    description: 角色增删改查（RoleController）
+  - name: 组织架构
+    description: 组织架构树形管理（OrgController）
+  - name: 电厂管理
+    description: 电厂基础信息与状态查询（PlantController）
+  - name: 水文站管理
+    description: 水文站信息管理（HydroStationController）
+  - name: GIS 空间服务
+    description: 地理信息系统空间查询（GisController）
+  - name: 报警管理
+    description: 报警查询、确认与处置（AlarmController）
+  - name: 预警管理
+    description: 预警信息查询与取消（WarningController）
+  - name: 规则管理
+    description: 报警规则重载与版本查询（RuleManageController）
+  - name: 统计分析
+    description: 首页看板与趋势分析（StatsController）
+  - name: 预测服务
+    description: 水位与发电量预测（PredictController）
+  - name: 数据采集
+    description: 气象、水文、应急数据采集（CollectorController）
+
+paths:
+  # ============================================================
+  # 认证授权 (AuthController) - 3 endpoints
+  # ============================================================
+  /api/auth/login:
+    post:
+      tags: [认证授权]
+      summary: 用户登录
+      description: 用户名密码登录，返回 JWT Token
+      security: []
+      parameters:
+        - name: username
+          in: query
+          required: true
+          description: 用户名
+          schema:
+            type: string
+        - name: password
+          in: query
+          required: true
+          description: 密码
+          schema:
+            type: string
+            format: password
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginVO'
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+
+  /api/auth/logout:
+    post:
+      tags: [认证授权]
+      summary: 用户登出
+      description: 注销当前 Token，使其失效（Authorization 可选）
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+
+  /api/auth/refreshToken:
+    post:
+      tags: [认证授权]
+      summary: 刷新Token
+      description: 使用当前 Token 获取新的 JWT Token（Authorization 可选）
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginVO'
+        '402':
+          description: Token 已过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+
+  # ============================================================
+  # 用户管理 (UserController) - 5 endpoints
+  # ============================================================
+  /api/users:
+    get:
+      tags: [用户管理]
+      summary: 用户列表（分页查询）
+      description: 分页查询用户列表，支持关键字搜索
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: keyword
+          in: query
+          description: 用户名/姓名关键字
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResultSysUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [用户管理]
+      summary: 新建用户
+      description: 创建新用户
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysUser'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [用户管理]
+      summary: 更新用户
+      description: 更新用户信息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysUser'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/users/{id}:
+    get:
+      tags: [用户管理]
+      summary: 用户详情
+      description: 根据用户ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginVO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [用户管理]
+      summary: 删除用户
+      description: 根据用户ID删除用户
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 角色管理 (RoleController) - 5 endpoints
+  # ============================================================
+  /api/roles:
+    get:
+      tags: [角色管理]
+      summary: 角色列表
+      description: 查询所有角色列表
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SysRole'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [角色管理]
+      summary: 新建角色
+      description: 创建新角色
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysRole'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysRole'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [角色管理]
+      summary: 更新角色
+      description: 更新角色信息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysRole'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysRole'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/roles/{id}:
+    get:
+      tags: [角色管理]
+      summary: 角色详情
+      description: 根据角色ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysRole'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [角色管理]
+      summary: 删除角色
+      description: 根据角色ID删除角色
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 组织架构 (OrgController) - 6 endpoints
+  # ============================================================
+  /api/orgs:
+    get:
+      tags: [组织架构]
+      summary: 组织列表
+      description: 查询所有组织列表（平铺）
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SysOrg'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [组织架构]
+      summary: 新建组织
+      description: 创建新组织节点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysOrg'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysOrg'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [组织架构]
+      summary: 更新组织
+      description: 更新组织节点信息
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SysOrg'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysOrg'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/orgs/tree:
+    get:
+      tags: [组织架构]
+      summary: 组织树形结构
+      description: 查询组织树形结构（带 children）
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SysOrg'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/orgs/{id}:
+    get:
+      tags: [组织架构]
+      summary: 组织详情
+      description: 根据组织ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SysOrg'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [组织架构]
+      summary: 删除组织
+      description: 根据组织ID删除组织节点
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 电厂管理 (PlantController) - 6 endpoints
+  # ============================================================
+  /api/plants:
+    get:
+      tags: [电厂管理]
+      summary: 电厂列表（分页查询）
+      description: 支持按类型、状态、关键字分页查询电厂列表
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: type
+          in: query
+          description: 电厂类型
+          schema:
+            $ref: '#/components/schemas/PlantType'
+        - name: status
+          in: query
+          description: 运行状态
+          schema:
+            $ref: '#/components/schemas/PlantStatus'
+        - name: keyword
+          in: query
+          description: 名称关键字（模糊查询）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResultPlant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [电厂管理]
+      summary: 新建电厂
+      description: 创建一个新电厂
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plant'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/plants/nearby:
+    get:
+      tags: [电厂管理]
+      summary: 附近电厂
+      description: 根据经纬度和半径查询附近电厂
+      parameters:
+        - name: lng
+          in: query
+          required: true
+          description: 经度
+          schema:
+            type: number
+            format: double
+        - name: lat
+          in: query
+          required: true
+          description: 纬度
+          schema:
+            type: number
+            format: double
+        - name: radius
+          in: query
+          required: true
+          description: 搜索半径（公里）
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Plant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/plants/{id}:
+    get:
+      tags: [电厂管理]
+      summary: 电厂详情
+      description: 根据电厂ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [电厂管理]
+      summary: 更新电厂
+      description: 更新电厂信息
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plant'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Plant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [电厂管理]
+      summary: 删除电厂
+      description: 根据电厂ID删除电厂
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/R'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 水文站管理 (HydroStationController) - 5 endpoints
+  # ============================================================
+  /api/hydro/stations:
+    get:
+      tags: [水文站管理]
+      summary: 水文站列表（分页）
+      description: 查询水文站列表，支持按城市、河流、关键字分页筛选
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: city
+          in: query
+          description: 所属城市
+          schema:
+            type: string
+        - name: river
+          in: query
+          description: 所属河流
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          description: 名称关键字
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResultHydroStation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [水文站管理]
+      summary: 新建水文站
+      description: 创建新水文站
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HydroStation'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HydroStation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/hydro/stations/{id}:
+    get:
+      tags: [水文站管理]
+      summary: 水文站详情
+      description: 根据水文站ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HydroStation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/hydro/stations/by-city/{city}:
+    get:
+      tags: [水文站管理]
+      summary: 按城市查询水文站
+      description: 根据城市名称查询该城市下所有水文站
+      parameters:
+        - name: city
+          in: path
+          required: true
+          description: 城市名称
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HydroStation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/hydro/stations/by-river/{river}:
+    get:
+      tags: [水文站管理]
+      summary: 按河流查询水文站
+      description: 根据河流名称查询该河流下所有水文站
+      parameters:
+        - name: river
+          in: path
+          required: true
+          description: 河流名称
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HydroStation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # GIS 空间服务 (GisController) - 3 endpoints
+  # ============================================================
+  /api/gis/plants/bounds:
+    get:
+      tags: [GIS 空间服务]
+      summary: 按范围查询电厂（GeoJSON）
+      description: 在指定经纬度范围内查询电厂，返回 GeoJSON FeatureCollection
+      parameters:
+        - name: minLng
+          in: query
+          required: true
+          description: 最小经度
+          schema:
+            type: number
+            format: double
+        - name: maxLng
+          in: query
+          required: true
+          description: 最大经度
+          schema:
+            type: number
+            format: double
+        - name: minLat
+          in: query
+          required: true
+          description: 最小纬度
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: true
+          description: 最大纬度
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/gis/hydro/stations/bounds:
+    get:
+      tags: [GIS 空间服务]
+      summary: 按范围查询水文站（GeoJSON）
+      description: 在指定经纬度范围内查询水文站，返回 GeoJSON FeatureCollection
+      parameters:
+        - name: minLng
+          in: query
+          required: true
+          description: 最小经度
+          schema:
+            type: number
+            format: double
+        - name: maxLng
+          in: query
+          required: true
+          description: 最大经度
+          schema:
+            type: number
+            format: double
+        - name: minLat
+          in: query
+          required: true
+          description: 最小纬度
+          schema:
+            type: number
+            format: double
+        - name: maxLat
+          in: query
+          required: true
+          description: 最大纬度
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HydroStationFeatureCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/gis/distance:
+    get:
+      tags: [GIS 空间服务]
+      summary: 计算两点距离
+      description: 计算两个经纬度坐标之间的距离
+      parameters:
+        - name: lng1
+          in: query
+          required: true
+          description: 第一个点的经度
+          schema:
+            type: number
+            format: double
+        - name: lat1
+          in: query
+          required: true
+          description: 第一个点的纬度
+          schema:
+            type: number
+            format: double
+        - name: lng2
+          in: query
+          required: true
+          description: 第二个点的经度
+          schema:
+            type: number
+            format: double
+        - name: lat2
+          in: query
+          required: true
+          description: 第二个点的纬度
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: number
+                        format: double
+                        description: 两点之间距离（公里）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # 报警管理 (AlarmController) - 4 endpoints
+  # ============================================================
+  /api/alarms:
+    get:
+      tags: [报警管理]
+      summary: 报警列表（分页）
+      description: 按级别、状态、电厂、时间范围分页查询报警
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: level
+          in: query
+          description: 报警级别
+          schema:
+            type: string
+            enum: [emergency, high, medium, low]
+        - name: status
+          in: query
+          description: 处置状态
+          schema:
+            type: string
+            enum: [unconfirmed, confirmed, resolved]
+        - name: plantId
+          in: query
+          description: 电厂ID
+          schema:
+            type: integer
+            format: int64
+        - name: startTime
+          in: query
+          description: 触发开始时间（yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          description: 触发结束时间（yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResultAlarm'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/alarms/{id}:
+    get:
+      tags: [报警管理]
+      summary: 报警详情
+      description: 根据报警ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Alarm'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/alarms/{id}/confirm:
+    put:
+      tags: [报警管理]
+      summary: 确认报警
+      description: 运维人员确认报警，状态由 unconfirmed 变为 confirmed
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: handler
+          in: query
+          required: true
+          description: 确认人
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Alarm'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/alarms/{id}/resolve:
+    put:
+      tags: [报警管理]
+      summary: 处理报警
+      description: 运维人员处置报警，状态变为 resolved
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: handler
+          in: query
+          required: true
+          description: 处理人
+          schema:
+            type: string
+        - name: remark
+          in: query
+          required: false
+          description: 处理备注
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 处理成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Alarm'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 预警管理 (WarningController) - 3 endpoints
+  # ============================================================
+  /api/warnings:
+    get:
+      tags: [预警管理]
+      summary: 预警列表（分页）
+      description: 查询气象、水文、火情等预警信息
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: level
+          in: query
+          description: 预警级别
+          schema:
+            $ref: '#/components/schemas/WarningLevel'
+        - name: type
+          in: query
+          description: 预警类型
+          schema:
+            $ref: '#/components/schemas/WeatherWarningType'
+        - name: status
+          in: query
+          description: 状态
+          schema:
+            type: string
+            enum: [active, expired, cancelled]
+        - name: plantId
+          in: query
+          description: 电厂ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResultWarning'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/warnings/{id}:
+    get:
+      tags: [预警管理]
+      summary: 预警详情
+      description: 根据预警ID查询详情
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Warning'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/warnings/{id}/cancel:
+    put:
+      tags: [预警管理]
+      summary: 取消预警
+      description: 取消指定预警
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Warning'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 规则管理 (RuleManageController) - 2 endpoints
+  # ============================================================
+  /api/rules/reload:
+    post:
+      tags: [规则管理]
+      summary: 重载规则
+      description: 重新加载报警规则引擎配置
+      responses:
+        '200':
+          description: 重载成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: 重载结果信息
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/rules/version:
+    get:
+      tags: [规则管理]
+      summary: 查询规则版本
+      description: 获取当前报警规则引擎的版本信息
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        description: 规则版本信息
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # 统计分析 (StatsController) - 4 endpoints
+  # ============================================================
+  /api/stats/dashboard:
+    get:
+      tags: [统计分析]
+      summary: 首页统计看板数据
+      description: 返回首页大屏所需的汇总统计：电厂总数、各状态分布、报警统计、预警统计等
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardVO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/stats/plant-trend:
+    get:
+      tags: [统计分析]
+      summary: 电厂趋势分析
+      description: 返回电厂负荷/出力的历史趋势数据（时间序列格式）
+      parameters:
+        - name: plantId
+          in: query
+          required: true
+          description: 电厂ID
+          schema:
+            type: integer
+            format: int64
+        - name: metric
+          in: query
+          required: true
+          description: 指标类型
+          schema:
+            type: string
+            enum: [load, output, capacity]
+        - name: startTime
+          in: query
+          required: true
+          description: 开始时间
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          description: 结束时间
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlantTrendVO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/stats/alarm-statistics:
+    get:
+      tags: [统计分析]
+      summary: 报警统计分析
+      description: 按时间范围统计报警数据
+      parameters:
+        - name: startTime
+          in: query
+          required: true
+          description: 开始时间
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          description: 结束时间
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/StatItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/stats/hydro-statistics:
+    get:
+      tags: [统计分析]
+      summary: 水文统计分析
+      description: 按水文站和时间范围统计水文数据
+      parameters:
+        - name: stationId
+          in: query
+          required: true
+          description: 水文站ID
+          schema:
+            type: integer
+            format: int64
+        - name: startTime
+          in: query
+          required: true
+          description: 开始时间
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          description: 结束时间
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties:
+                            type: object
+                          description: 水文统计项（Map结构）
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # 预测服务 (PredictController) - 2 endpoints
+  # ============================================================
+  /api/predict/water-level/{stationId}:
+    get:
+      tags: [预测服务]
+      summary: 水位预测
+      description: 基于机器学习模型预测指定水文站未来水位
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          description: 水文站ID
+          schema:
+            type: integer
+            format: int64
+        - name: forecastHours
+          in: query
+          required: false
+          description: 预测时长（小时），默认24小时
+          schema:
+            type: integer
+            default: 24
+        - name: modelType
+          in: query
+          required: false
+          description: 模型类型
+          schema:
+            type: string
+            enum: [lstm, xgboost, ensemble]
+            default: ensemble
+      responses:
+        '200':
+          description: 预测成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PredictionResponseDTO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/predict/power/{plantId}:
+    get:
+      tags: [预测服务]
+      summary: 发电量预测
+      description: 基于机器学习模型预测指定电厂未来发电量
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          description: 电厂ID
+          schema:
+            type: integer
+            format: int64
+        - name: forecastHours
+          in: query
+          required: false
+          description: 预测时长（小时），默认24小时
+          schema:
+            type: integer
+            default: 24
+        - name: modelType
+          in: query
+          required: false
+          description: 模型类型
+          schema:
+            type: string
+            enum: [lstm, xgboost, ensemble]
+            default: ensemble
+      responses:
+        '200':
+          description: 预测成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PredictionResponseDTO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # 数据采集 (CollectorController) - 5 endpoints
+  # ============================================================
+  /api/collector/weather/trigger:
+    get:
+      tags: [数据采集]
+      summary: 触发气象数据采集
+      description: 手动触发气象数据采集任务，返回最新采集的气象数据列表
+      responses:
+        '200':
+          description: 采集成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WeatherData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collector/hydro/trigger:
+    get:
+      tags: [数据采集]
+      summary: 触发水文数据采集
+      description: 手动触发病文数据采集任务，返回最新采集的水文数据列表
+      responses:
+        '200':
+          description: 采集成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HydroData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collector/emergency/trigger:
+    get:
+      tags: [数据采集]
+      summary: 触发应急事件采集
+      description: 手动触发应急事件数据采集任务，返回最新采集的应急事件列表
+      responses:
+        '200':
+          description: 采集成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EmergencyEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/collector/weather/{plantId}:
+    get:
+      tags: [数据采集]
+      summary: 查询电厂气象数据
+      description: 查询指定电厂的最新气象数据
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          description: 电厂ID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WeatherData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/collector/hydro/{stationId}/readings:
+    get:
+      tags: [数据采集]
+      summary: 查询水文站读数
+      description: 查询指定水文站在时间范围内的历史读数数据
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          description: 水文站ID
+          schema:
+            type: integer
+            format: int64
+        - name: startTime
+          in: query
+          required: true
+          description: 开始时间
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          required: true
+          description: 结束时间
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/R'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HydroData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ================================================================
+# Components
+# ================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Bearer Token 认证，登录后获取 token，请求头携带 Authorization: Bearer <token>"
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 页码（从1开始）
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    SizeParam:
+      name: size
+      in: query
+      description: 每页条数
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: 主键ID
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    BadRequest:
+      description: 请求参数错误（400 PARAM_ERROR）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+    Unauthorized:
+      description: 未认证或Token无效（401 UNAUTHORIZED）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+    TokenExpired:
+      description: Token已过期（402 TOKEN_EXPIRED）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+    Forbidden:
+      description: 无权限访问（403 FORBIDDEN）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+    NotFound:
+      description: 资源不存在（404 NOT_FOUND）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+    InternalError:
+      description: 服务器内部错误（500 SYSTEM_ERROR）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/R'
+
+  schemas:
+    # --------------------------------------------------------
+    # 统一响应包装 R<T>
+    # --------------------------------------------------------
+    R:
+      type: object
+      description: |
+        统一响应包装结构 R<T>。
+        错误码：200 SUCCESS, 400 PARAM_ERROR, 401 UNAUTHORIZED,
+        402 TOKEN_EXPIRED, 403 FORBIDDEN, 404 NOT_FOUND,
+        500 BUSINESS_ERROR, 5000 SYSTEM_ERROR
+      properties:
+        code:
+          type: integer
+          description: 业务状态码
+          example: 200
+        msg:
+          type: string
+          description: 提示信息
+          example: 操作成功
+        data:
+          description: 业务数据（具体结构见各接口）
+          nullable: true
+
+    # --------------------------------------------------------
+    # 分页结果 PageResult<T>
+    # --------------------------------------------------------
+    PageResult:
+      type: object
+      description: 分页结果通用结构 PageResult<T>
+      properties:
+        list:
+          type: array
+          description: 数据列表
+          items: {}
+        total:
+          type: integer
+          format: int64
+          description: 总记录数
+        page:
+          type: integer
+          description: 当前页码
+        size:
+          type: integer
+          description: 每页条数
+
+    PageResultSysUser:
+      allOf:
+        - $ref: '#/components/schemas/PageResult'
+        - type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/SysUser'
+
+    PageResultPlant:
+      allOf:
+        - $ref: '#/components/schemas/PageResult'
+        - type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/Plant'
+
+    PageResultHydroStation:
+      allOf:
+        - $ref: '#/components/schemas/PageResult'
+        - type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/HydroStation'
+
+    PageResultAlarm:
+      allOf:
+        - $ref: '#/components/schemas/PageResult'
+        - type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/Alarm'
+
+    PageResultWarning:
+      allOf:
+        - $ref: '#/components/schemas/PageResult'
+        - type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/Warning'
+
+    # --------------------------------------------------------
+    # 认证与用户
+    # --------------------------------------------------------
+    LoginVO:
+      type: object
+      description: 登录返回视图对象
+      properties:
+        token:
+          type: string
+          description: JWT Token
+        userId:
+          type: integer
+          format: int64
+          description: 用户ID
+        username:
+          type: string
+          description: 用户名
+        realName:
+          type: string
+          description: 真实姓名
+        roles:
+          type: array
+          description: 角色列表
+          items:
+            $ref: '#/components/schemas/UserRole'
+        permissions:
+          type: array
+          description: 权限标识列表
+          items:
+            type: string
+
+    SysUser:
+      type: object
+      description: 系统用户
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        username:
+          type: string
+          description: 用户名
+        realName:
+          type: string
+          description: 真实姓名
+        phone:
+          type: string
+          description: 手机号
+        email:
+          type: string
+          description: 邮箱
+        orgId:
+          type: integer
+          format: int64
+          description: 所属组织ID
+        status:
+          type: integer
+          description: 状态（0禁用 1启用）
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    # --------------------------------------------------------
+    # 角色
+    # --------------------------------------------------------
+    SysRole:
+      type: object
+      description: 系统角色
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        name:
+          type: string
+          description: 角色名称
+        code:
+          type: string
+          description: 角色编码
+        description:
+          type: string
+          description: 角色描述
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    # --------------------------------------------------------
+    # 组织架构
+    # --------------------------------------------------------
+    SysOrg:
+      type: object
+      description: 组织架构（支持树形结构，带 children）
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        parentId:
+          type: integer
+          format: int64
+          description: 父级ID
+        name:
+          type: string
+          description: 组织名称
+        code:
+          type: string
+          description: 组织编码
+        sort:
+          type: integer
+          description: 排序号
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+        children:
+          type: array
+          description: 子组织列表
+          items:
+            $ref: '#/components/schemas/SysOrg'
+
+    # --------------------------------------------------------
+    # 电厂
+    # --------------------------------------------------------
+    Plant:
+      type: object
+      description: 电厂信息
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        name:
+          type: string
+          description: 电厂名称
+          example: 华电广州燃煤电厂
+        type:
+          $ref: '#/components/schemas/PlantType'
+        lng:
+          type: number
+          format: double
+          description: 经度
+          example: 113.264385
+        lat:
+          type: number
+          format: double
+          description: 纬度
+          example: 23.129112
+        capacity:
+          type: number
+          format: double
+          description: 装机容量（MW）
+          example: 600.00
+        status:
+          $ref: '#/components/schemas/PlantStatus'
+        address:
+          type: string
+          description: 详细地址
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    # --------------------------------------------------------
+    # 水文站
+    # --------------------------------------------------------
+    HydroStation:
+      type: object
+      description: 水文站信息
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        name:
+          type: string
+          description: 水文站名称
+          example: 北江石角水文站
+        riverBasin:
+          type: string
+          description: 所属流域/河流
+          example: 北江
+        lng:
+          type: number
+          format: double
+          description: 经度
+        lat:
+          type: number
+          format: double
+          description: 纬度
+        warningLevel:
+          type: number
+          format: double
+          description: 警戒水位（m）
+        guaranteeLevel:
+          type: number
+          format: double
+          description: 保证水位（m）
+        historicalMax:
+          type: number
+          format: double
+          description: 历史最高水位（m）
+        flowCapacity:
+          type: number
+          format: double
+          description: 流量容量（m³/s）
+        city:
+          type: string
+          description: 所属城市
+          example: 清远
+        status:
+          type: integer
+          description: 状态
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间
+
+    # --------------------------------------------------------
+    # 报警
+    # --------------------------------------------------------
+    Alarm:
+      type: object
+      description: 报警信息
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        level:
+          type: string
+          description: 报警级别
+          enum: [emergency, high, medium, low]
+        status:
+          type: string
+          description: 处置状态
+          enum: [unconfirmed, confirmed, resolved]
+        content:
+          type: string
+          description: 报警内容
+          example: 1号机组主变压器温度超限（85℃）
+        plantId:
+          type: integer
+          format: int64
+          description: 关联电厂ID
+        plantName:
+          type: string
+          description: 关联电厂名称
+        triggerTime:
+          type: string
+          format: date-time
+          description: 触发时间
+        confirmTime:
+          type: string
+          format: date-time
+          description: 确认时间
+          nullable: true
+        resolveTime:
+          type: string
+          format: date-time
+          description: 处理完成时间
+          nullable: true
+        handler:
+          type: string
+          description: 处理人
+          nullable: true
+        remark:
+          type: string
+          description: 处理备注
+          nullable: true
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    # --------------------------------------------------------
+    # 预警
+    # --------------------------------------------------------
+    Warning:
+      type: object
+      description: 预警信息
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        level:
+          $ref: '#/components/schemas/WarningLevel'
+        type:
+          $ref: '#/components/schemas/WeatherWarningType'
+        content:
+          type: string
+          description: 预警内容
+        plantId:
+          type: integer
+          format: int64
+          description: 关联电厂ID
+        plantName:
+          type: string
+          description: 关联电厂名称
+        startTime:
+          type: string
+          format: date-time
+          description: 预警开始时间
+        endTime:
+          type: string
+          format: date-time
+          description: 预警结束时间
+        status:
+          type: string
+          description: 状态
+          enum: [active, expired, cancelled]
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间
+
+    # --------------------------------------------------------
+    # 气象数据
+    # --------------------------------------------------------
+    WeatherData:
+      type: object
+      description: 气象数据
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        plantId:
+          type: integer
+          format: int64
+          description: 电厂ID
+        temp:
+          type: number
+          format: double
+          description: 温度（℃）
+        humidity:
+          type: number
+          format: double
+          description: 湿度（%）
+        windSpeed:
+          type: number
+          format: double
+          description: 风速（m/s）
+        windDirection:
+          type: string
+          description: 风向
+        rainfall:
+          type: number
+          format: double
+          description: 降雨量（mm）
+        recordTime:
+          type: string
+          format: date-time
+          description: 记录时间
+
+    # --------------------------------------------------------
+    # 水文数据
+    # --------------------------------------------------------
+    HydroData:
+      type: object
+      description: 水文数据
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        stationId:
+          type: integer
+          format: int64
+          description: 水文站ID
+        waterLevel:
+          type: number
+          format: double
+          description: 水位（m）
+        flowRate:
+          type: number
+          format: double
+          description: 流量（m³/s）
+        trend:
+          type: string
+          description: 水位趋势
+          enum: [rising, falling, steady]
+        alertLevel:
+          type: string
+          description: 告警等级
+          enum: [normal, watch, warning, flood]
+        readingTime:
+          type: string
+          format: date-time
+          description: 读数时间
+
+    # --------------------------------------------------------
+    # 应急事件
+    # --------------------------------------------------------
+    EmergencyEvent:
+      type: object
+      description: 应急事件
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 主键
+        type:
+          type: string
+          description: 事件类型
+        level:
+          type: string
+          description: 事件等级
+        title:
+          type: string
+          description: 事件标题
+        content:
+          type: string
+          description: 事件内容
+        location:
+          type: string
+          description: 事件地点
+        lng:
+          type: number
+          format: double
+          description: 经度
+        lat:
+          type: number
+          format: double
+          description: 纬度
+        occurTime:
+          type: string
+          format: date-time
+          description: 发生时间
+        status:
+          type: string
+          description: 状态
+
+    # --------------------------------------------------------
+    # 仪表盘
+    # --------------------------------------------------------
+    DashboardVO:
+      type: object
+      description: 首页统计看板视图对象
+      properties:
+        totalPlants:
+          type: integer
+          description: 电厂总数
+        normalCount:
+          type: integer
+          description: 正常电厂数
+        warningCount:
+          type: integer
+          description: 预警电厂数
+        dangerCount:
+          type: integer
+          description: 危险电厂数
+        offlineCount:
+          type: integer
+          description: 离线电厂数
+        totalAlarms:
+          type: integer
+          description: 报警总数
+        activeWarnings:
+          type: integer
+          description: 活跃预警数
+        hydroStationCount:
+          type: integer
+          description: 水文站总数
+        hydroAlertCount:
+          type: integer
+          description: 水文告警数
+
+    # --------------------------------------------------------
+    # 趋势分析
+    # --------------------------------------------------------
+    PlantTrendVO:
+      type: object
+      description: 电厂趋势分析（时间序列格式）
+      properties:
+        plantId:
+          type: integer
+          format: int64
+          description: 电厂ID
+        plantName:
+          type: string
+          description: 电厂名称
+        dates:
+          type: array
+          description: 时间序列
+          items:
+            type: string
+            format: date-time
+        values:
+          type: array
+          description: 数值序列
+          items:
+            type: number
+            format: double
+        metric:
+          type: string
+          description: 指标类型
+
+    # --------------------------------------------------------
+    # 统计项
+    # --------------------------------------------------------
+    StatItem:
+      type: object
+      description: 统计项
+      properties:
+        label:
+          type: string
+          description: 标签
+        value:
+          type: number
+          format: double
+          description: 数值
+        color:
+          type: string
+          description: 显示颜色
+
+    # --------------------------------------------------------
+    # 预测响应
+    # --------------------------------------------------------
+    PredictionResponseDTO:
+      type: object
+      description: 预测服务响应
+      properties:
+        predictType:
+          type: string
+          description: 预测类型（water_level / power）
+        targetId:
+          type: integer
+          format: int64
+          description: 目标ID（水文站ID或电厂ID）
+        forecastTimes:
+          type: array
+          description: 预测时间序列
+          items:
+            type: string
+            format: date-time
+        forecastValues:
+          type: array
+          description: 预测值序列
+          items:
+            type: number
+            format: double
+        upperBound:
+          type: array
+          description: 置信上界
+          items:
+            type: number
+            format: double
+        lowerBound:
+          type: array
+          description: 置信下界
+          items:
+            type: number
+            format: double
+        confidence:
+          type: number
+          format: double
+          description: 置信度（0~1）
+        modelUsed:
+          type: string
+          description: 使用的模型
+        fallback:
+          type: boolean
+          description: 是否使用降级策略
+        generatedAt:
+          type: string
+          format: date-time
+          description: 预测生成时间
+
+    # --------------------------------------------------------
+    # 时间序列数据
+    # --------------------------------------------------------
+    TimeSeriesData:
+      type: object
+      description: 时间序列数据通用格式
+      properties:
+        times:
+          type: array
+          description: 时间戳序列
+          items:
+            type: string
+            format: date-time
+        values:
+          type: array
+          description: 数值序列
+          items:
+            type: number
+        unit:
+          type: string
+          description: 单位
+
+    # --------------------------------------------------------
+    # 枚举类型
+    # --------------------------------------------------------
+    UserRole:
+      type: string
+      description: 用户角色
+      enum:
+        - ADMIN
+        - PROD_SAFETY
+        - PLANT_MANAGER
+        - OPERATOR
+
+    PlantType:
+      type: string
+      description: 电厂类型
+      enum:
+        - coal
+        - gas
+        - solar
+        - wind
+        - storage
+
+    PlantStatus:
+      type: string
+      description: 电厂运行状态
+      enum:
+        - normal
+        - warning
+        - danger
+        - offline
+
+    WarningLevel:
+      type: string
+      description: 预警级别
+      enum:
+        - blue
+        - yellow
+        - orange
+        - red
+
+    WeatherWarningType:
+      type: string
+      description: 预警类型
+      enum:
+        - typhoon
+        - rainstorm
+        - high_temp
+        - low_temp
+        - gale
+        - fog
+        - haze
+        - thunder
+        - ice
+        - drought
+        - flood
+        - other
+
+    AlertRuleType:
+      type: string
+      description: 报警规则类型
+      enum:
+        - hydro
+        - weather
+        - fire
+        - equipment
+        - composite
+
+    RuleLogicType:
+      type: string
+      description: 规则逻辑类型
+      enum:
+        - static_threshold
+        - dynamic_deviation
+        - combo_logic
+        - trend_warning
+
+    # --------------------------------------------------------
+    # GeoJSON FeatureCollection（GIS 空间服务）
+    # --------------------------------------------------------
+    GeoJSONFeatureCollection:
+      type: object
+      description: GeoJSON FeatureCollection 基础结构
+      required:
+        - type
+        - features
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJSONFeature'
+
+    GeoJSONFeature:
+      type: object
+      description: GeoJSON Feature
+      required:
+        - type
+        - geometry
+        - properties
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          $ref: '#/components/schemas/GeoJSONGeometry'
+        properties:
+          type: object
+          additionalProperties: true
+
+    GeoJSONGeometry:
+      type: object
+      description: GeoJSON Geometry
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon]
+        coordinates:
+          type: array
+          items: {}
+
+    PlantFeatureCollection:
+      allOf:
+        - $ref: '#/components/schemas/GeoJSONFeatureCollection'
+        - type: object
+          description: 电厂 GeoJSON FeatureCollection，properties 包含 Plant 全部字段
+          properties:
+            features:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/GeoJSONFeature'
+                  - type: object
+                    properties:
+                      properties:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            format: int64
+                          name:
+                            type: string
+                          type:
+                            $ref: '#/components/schemas/PlantType'
+                          lng:
+                            type: number
+                            format: double
+                          lat:
+                            type: number
+                            format: double
+                          capacity:
+                            type: number
+                            format: double
+                          status:
+                            $ref: '#/components/schemas/PlantStatus'
+                          address:
+                            type: string
+
+    HydroStationFeatureCollection:
+      allOf:
+        - $ref: '#/components/schemas/GeoJSONFeatureCollection'
+        - type: object
+          description: 水文站 GeoJSON FeatureCollection，properties 包含 HydroStation 全部字段
+          properties:
+            features:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/GeoJSONFeature'
+                  - type: object
+                    properties:
+                      properties:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            format: int64
+                          name:
+                            type: string
+                          riverBasin:
+                            type: string
+                          lng:
+                            type: number
+                            format: double
+                          lat:
+                            type: number
+                            format: double
+                          warningLevel:
+                            type: number
+                            format: double
+                          guaranteeLevel:
+                            type: number
+                            format: double
+                          historicalMax:
+                            type: number
+                            format: double
+                          flowCapacity:
+                            type: number
+                            format: double
+                          city:
+                            type: string
+                          status:
+                            type: integer

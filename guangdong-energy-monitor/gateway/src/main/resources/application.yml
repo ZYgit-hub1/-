@@ -1,0 +1,110 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: true
+
+    gateway:
+      # 关闭基于服务名的自动路由，避免服务名裸暴露；统一使用下方显式路由
+      discovery:
+        locator:
+          enabled: false
+
+      # ==================== 路由规则（声明式配置） ====================
+      routes:
+        # ---------- 用户 / 认证服务 ----------
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**,/api/users/**,/api/roles/**,/api/orgs/**
+          filters:
+            # 登录/注册接口限流：每 IP 每分钟 10 次
+            - IpRateLimit=10,1
+
+        # ---------- 电厂 / 水文服务 ----------
+        - id: plant-service
+          uri: lb://plant-service
+          predicates:
+            - Path=/api/plants/**,/api/hydro/**,/api/gis/**
+          filters:
+            # 厂区级权限校验：PLANT_MANAGER 看本厂+周边，OPERATOR 仅看本厂
+            - PlantScopeAuth=PLANT_SCOPE
+
+        # ---------- 告警 / 预警服务 ----------
+        - id: alert-service
+          uri: lb://alert-service
+          predicates:
+            - Path=/api/alarms/**,/api/warnings/**,/api/rules/**
+          filters:
+            # 厂区级权限校验
+            - PlantScopeAuth=PLANT_SCOPE
+
+        # ---------- 统计分析 / 预测服务 ----------
+        - id: analysis-service
+          uri: lb://analysis-service
+          predicates:
+            - Path=/api/stats/**,/api/predict/**
+          filters:
+            # 仅集团级可访问的接口（PlantScopeAuth + PreAuthorize 双重校验）
+            - PlantScopeAuth=GROUP_ONLY
+            - PreAuthorize=hasRole('ADMIN')
+
+        # ---------- 采集器 / 气象服务 ----------
+        - id: collector-service
+          uri: lb://collector-service
+          predicates:
+            - Path=/api/weather/**,/api/collector/**,/api/emergency/**
+          filters:
+            # 仅集团级可访问（PreAuthorize 支持 hasRole / hasPermission / hasPlantAccess）
+            - PreAuthorize=hasRole('ADMIN')
+
+  # ==================== Redis（响应式） ====================
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 1
+      timeout: 5000ms
+
+# ==================== JWT 配置 ====================
+jwt:
+  secret: ${JWT_SECRET:huadianguangdong-energy-monitor-default-secret-key-32bytes}
+  expire: ${JWT_EXPIRE:7200000}
+
+# ==================== Gateway 全局限流配置 ====================
+gateway:
+  rate-limit:
+    # 默认：每 IP 每分钟 100 次
+    default-capacity: 100
+    default-refill-minutes: 1
+
+# ==================== Springdoc OpenAPI 聚合 ====================
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# ==================== 日志级别 ====================
+logging:
+  level:
+    root: INFO
+    com.huadianguangdong: DEBUG
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: WARN
